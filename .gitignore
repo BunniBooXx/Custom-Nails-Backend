@@ -1,0 +1,4 @@
+__pycache__
+migrations
+my-venv 
+.env
