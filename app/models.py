@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import get_jwt_identity
 
+
 db = SQLAlchemy()
 
 def get_current_user():
@@ -19,8 +20,7 @@ class TokenBlocklist(db.Model):
     user_id = db.Column(
         db.Integer,
         db.ForeignKey('user.user_id'),
-        default=lambda: get_current_user().user_id,
-        nullable=False,
+        nullable=True,  # Make the field nullable
     )
     created_at = db.Column(
         db.DateTime,
