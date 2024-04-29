@@ -1,7 +1,28 @@
 from flask import Blueprint, request, jsonify
 from app.models import db, Product
+import os
+from werkzeug.utils import secure_filename
 
 product_blueprint = Blueprint("product_blueprint", __name__, url_prefix="/product")
+
+# Define the upload folder
+UPLOAD_FOLDER = 'path_to_your_upload_folder'
+
+# Function to save uploaded image
+def save_image(image):
+    # Ensure the upload folder exists
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    
+    # Define the image filename
+    image_filename = secure_filename(image.filename)
+    image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+    
+    # Save the image file
+    image.save(image_path)
+    
+    # Return the image URL
+    return image_path
 
 @product_blueprint.route('/create', methods=['POST'])
 def create_product():
@@ -10,11 +31,14 @@ def create_product():
     description = request.form.get('description')
     price = request.form.get('price')
     quantity_available = request.form.get('quantity_available')
-    image_url = request.form.get('image_url')
+    image = request.files.get('image')
 
     # Check if any form data is missing
-    if not all([name, description, price, quantity_available, image_url]):
+    if not all([name, description, price, quantity_available, image]):
         return jsonify({'error': 'Missing required field(s)'}), 400
+
+    # Save the image and get the image URL
+    image_url = save_image(image)
 
     # Create a new product instance with the provided data
     product = Product(name=name, description=description, price=price, quantity_available=quantity_available, image_url=image_url)
@@ -64,7 +88,6 @@ def get_products():
         print(e)  # Print the error message
         return jsonify({'error': str(e)}), 500
 
-
 @product_blueprint.route('/read/<int:product_id>', methods=['GET'])
 def get_product(product_id):
     try:
@@ -81,4 +104,3 @@ def get_product(product_id):
             return jsonify({'success': False, 'error': 'Product not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-

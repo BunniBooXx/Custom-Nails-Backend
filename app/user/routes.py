@@ -22,6 +22,23 @@ def get_user(user_id):
         }), 200
     else:
         return jsonify({"message": "User not found"}), 404
+    
+    
+@user_blueprint.route("", methods=["GET"])
+@cross_origin()
+@jwt_required()
+def get_user_identity():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if user:
+        return jsonify({
+            "userId": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "avatar_image": user.avatar_image
+        }), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
 
 @user_blueprint.route('/signup', methods=['POST'])
 @cross_origin()
