@@ -123,19 +123,20 @@ def delete_item_from_cart(cart_id, item_id):
         return jsonify({'message': 'Cart item deleted successfully', 'new_total_amount': cart.total_amount}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
 
 
-@cart_blueprint.route('/read/<int:cart_id>', methods=['GET'])
+@cart_blueprint.route('/read', methods=['GET'])
 @jwt_required()
-def get_cart(cart_id):
+def get_cart():
     user_id = get_jwt_identity()
-    cart = Cart.query.filter_by(user_id=user_id, cart_id=cart_id).first()
+    cart = Cart.query.filter_by(user_id=user_id).first()
 
     if not cart:
         return jsonify({'error': 'Cart not found'}), 404
 
     cart_items = CartItem.query.filter_by(cart_id=cart.cart_id).all()
-    cart_data = {'items': []}
+    cart_data = {'cart_id': cart.cart_id, 'items': []}
     total_price = 0
 
     for cart_item in cart_items:
@@ -153,4 +154,5 @@ def get_cart(cart_id):
     cart_data['total_price'] = total_price
 
     return jsonify(cart_data)
+
 
