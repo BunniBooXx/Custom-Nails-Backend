@@ -6,7 +6,10 @@ from werkzeug.utils import secure_filename
 product_blueprint = Blueprint("product_blueprint", __name__, url_prefix="/product")
 
 # Define the upload folder
-UPLOAD_FOLDER = 'path_to_your_upload_folder'
+UPLOAD_FOLDER = 'nails'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+
 
 # Function to save uploaded image
 def save_image(image):
@@ -22,7 +25,7 @@ def save_image(image):
     image.save(image_path)
     
     # Return the image URL
-    return image_path
+    return f'http://localhost:5000/nails/{image_filename}'  # Return the full URL of the image
 
 @product_blueprint.route('/create', methods=['POST'])
 def create_product():

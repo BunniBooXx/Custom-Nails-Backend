@@ -1,4 +1,4 @@
-from flask import  request, jsonify
+from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from app.models import db, User, TokenBlocklist, datetime
 from datetime import timezone
@@ -9,7 +9,7 @@ user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
 
 @user_blueprint.route("/<int:user_id>", methods=["GET"])
-@cross_origin()
+@cross_origin(origins=["http://localhost:3000"])
 @jwt_required()
 def get_user(user_id):
     user = User.query.get(user_id)
@@ -40,6 +40,7 @@ def get_user_identity():
     else:
         return jsonify({"message": "User not found"}), 404
 
+
 @user_blueprint.route('/signup', methods=['POST'])
 @cross_origin()
 def signup():
@@ -60,21 +61,6 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
-from datetime import timedelta
-
-from flask_jwt_extended import create_access_token
-
-from flask_jwt_extended import create_access_token
-from flask_cors import cross_origin
-from flask_jwt_extended import create_access_token
-from flask_cors import cross_origin
-from flask_jwt_extended import create_access_token
-from flask_cors import cross_origin
-from flask_jwt_extended import create_access_token
-from flask_cors import cross_origin
-
-from flask_jwt_extended import create_access_token
-from flask_cors import cross_origin
 
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
@@ -155,7 +141,6 @@ def update_password(user_id):
 
     return jsonify({"message": "Password updated"}), 200
 
-# Similar functions for updating email and avatar_image can be defined.
 
 @user_blueprint.route('/update/<int:user_id>/email', methods=['PUT'])
 @cross_origin()
@@ -181,6 +166,7 @@ def update_email(user_id):
 
     return jsonify({"message": "Email updated"}), 200
 
+
 @user_blueprint.route('/update/<int:user_id>/avatar', methods=['PUT'])
 @cross_origin()
 @jwt_required()  
@@ -205,8 +191,21 @@ def update_avatar(user_id):
 
     return jsonify({"message": "Avatar image updated"}), 200
 
-from werkzeug.security import generate_password_hash
 
+@user_blueprint.route('/get/<int:user_id>/avatar', methods=["GET"])
+@cross_origin(origins=["http://localhost:3000"])
+@jwt_required()
+def get_avatar_image(user_id):
+    user = User.query.get(user_id)
+    if user: 
+        avatar_image = user.avatar_image or "default-avatar-image.jpg"
+        return jsonify ({
+            "avatar_image": avatar_image
+        }) , 200
+    else: 
+        return jsonify ({ "message" : "User not found"}), 404
+
+    
 @user_blueprint.route('/update/<int:user_id>/all', methods=['PUT'])
 @cross_origin()
 @jwt_required()  
@@ -241,6 +240,7 @@ def update_user_info(user_id):
 
     return jsonify({"message": "User information updated", "data": user.to_response()}), 200
 
+
 @user_blueprint.route("/logout", methods=["DELETE"])
 @cross_origin()
 @jwt_required(verify_type=False)
@@ -257,4 +257,3 @@ def modify_token():
     db.session.add(TokenBlocklist(jti=jti, type=ttype, user_id=user_id, created_at=now))
     db.session.commit()
     return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
-
