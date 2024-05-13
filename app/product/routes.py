@@ -96,14 +96,20 @@ def get_product(product_id):
     try:
         product = Product.query.get(product_id)
         if product:
-            return jsonify({'success': True, 'message': 'Product retrieved successfully', 'data': {
-                'id': product.product_id,
-                'name': product.name,
-                'price': product.price,
-                'description': product.description,
-                'image_url': product.image_url
-            }})
+            image_url = product.image_url 
+            return jsonify({
+                'success': True,
+                'message': 'Product retrieved successfully',
+                'data': {
+                    'id': product.product_id,
+                    'name': product.name,
+                    'price': product.price,
+                    'description': product.description,
+                    'image_url': image_url  # Only the relative image URL
+                }
+            })
         else:
             return jsonify({'success': False, 'error': 'Product not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
