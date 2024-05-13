@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Config: 
@@ -10,3 +13,5 @@ class Config:
     # FLASK JWT EXTENDED
     JWT_SECRET_KEY= os.environ.get("JWT_SECRET_KEY")
     JWT_TOKEN_LOCATION = ['headers']
+
+    STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
