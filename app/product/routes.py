@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.models import db, Product
 import os
+import stripe
 from werkzeug.utils import secure_filename
 
 product_blueprint = Blueprint("product_blueprint", __name__, url_prefix="/product")
@@ -113,3 +114,32 @@ def get_product(product_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@product_blueprint.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    try:
+        data = request.json
+        line_items = [
+            {
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': item['name'],
+                        'images': [item['image']],
+                    },
+                    'unit_amount': int(item['price'] * 100),  # Stripe expects the amount in cents
+                },
+                'quantity': item['quantity'],
+            } for item in data['items']
+        ]
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=line_items,
+            mode='payment',
+            success_url='http://localhost:3000/success',  # Replace with your frontend success URL
+            cancel_url='http://localhost:3000/cancel',  # Replace with your frontend cancel URL
+        )
+
+        return jsonify({'clientSecret': session.client_secret})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

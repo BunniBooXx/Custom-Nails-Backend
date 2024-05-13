@@ -8,8 +8,12 @@ from flask_cors import CORS
 from app.models import db, User 
 from datetime import timedelta
 import stripe
+from dotenv import load_dotenv 
 
 app = Flask(__name__,static_url_path='/nails', static_folder='nails')
+load_dotenv()
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+stripe.api_key = STRIPE_SECRET_KEY
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 @app.route('/nails/<path:filename>')
@@ -38,7 +42,7 @@ jwt = JWTManager(app)
 db.init_app(app)
 
 # Initialize Stripe
-stripe.api_key = 'pk_test_51OwSCeEBwfjW7s9fwT5GlYGVHY7f3YPeRxHEqbV8YJQN139JgZpuJjTgZIzoEmeds2FUi91q8TbSJVq1gxQbczmf00ht6oOGGU'
+stripe.api_key = STRIPE_SECRET_KEY
 
 # Define CORS headers
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -62,34 +66,6 @@ app.register_blueprint(product_blueprint)
 app.register_blueprint(cart_blueprint)
 app.register_blueprint(order_blueprint)
 
-# Stripe Checkout Session Route
-@app.route('/create-checkout-session/<int:order_id>', methods=['POST'])
-def create_checkout_session(order_id):
-    try:
-        data = request.json
-        quantity = data.get('quantity', 1)  # Default quantity is 1
-        # Retrieve order details here based on the order_id
-        # For example:
-        # order = Order.query.get(order_id)
-        
-        # Replace this with your product price ID
-        price_id = 'PRICE_ID_HERE'
-        
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[
-                {
-                    'price': price_id,
-                    'quantity': quantity,
-                },
-            ],
-            mode='payment',
-            success_url='http://localhost:3000/order/success/' + str(order_id),  # Your success URL
-            cancel_url='http://localhost:3000/order/canceled/' + str(order_id),  # Your cancel URL
-        )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-    return jsonify({'url': checkout_session.url}), 200
 
 # JWT Configurations
 @jwt.user_identity_loader
