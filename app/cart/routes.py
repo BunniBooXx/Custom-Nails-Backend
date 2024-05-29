@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import db, Product, Cart, CartItem
+from app.models import db, Product, Cart, CartItem, NailSizeOption
 from flask import Blueprint
 
 cart_blueprint = Blueprint("cart", __name__, url_prefix="/cart")
@@ -10,16 +10,18 @@ cart_blueprint = Blueprint("cart", __name__, url_prefix="/cart")
 @jwt_required()
 def add_to_cart():
     data = request.json
-    user_id = get_jwt_identity()  # Assuming you have user authentication
+    user_id = get_jwt_identity()
     product_id = data.get('product_id')
     quantity = data.get('quantity')
+    nail_size_option_id = data.get('nail_size_option_id')
+    left_hand_custom_size = data.get('left_hand_custom_size')
+    right_hand_custom_size = data.get('right_hand_custom_size')
 
-    if not product_id or not quantity:
-        return jsonify({'error': 'Product ID and quantity are required'}), 400
+    if not product_id or not quantity or not nail_size_option_id:
+        return jsonify({'error': 'Product ID, quantity, and nail size option are required'}), 400
 
     user_cart = Cart.query.filter_by(user_id=user_id).first()
     if not user_cart:
-        # Initialize the cart with a total_amount of 0
         user_cart = Cart(user_id=user_id, total_amount=0)
         db.session.add(user_cart)
 
@@ -38,19 +40,18 @@ def add_to_cart():
             cart_id=user_cart.cart_id,
             product_id=product_id,
             quantity=quantity,
-            unit_price=product.price
+            unit_price=product.price,
+            nail_size_option_id=nail_size_option_id,
+            left_hand_custom_size=left_hand_custom_size,
+            right_hand_custom_size=right_hand_custom_size
         )
+        db.session.add(cart_item)
 
     product.quantity_available -= quantity
-
-    # Calculate the updated total_amount of the cart
     user_cart.total_amount += (product.price * quantity)
-
-    db.session.add(cart_item)
     db.session.commit()
 
     return jsonify({'message': 'Product added to cart successfully'})
-
 
 @cart_blueprint.route('/update', methods=['PUT'])
 @jwt_required()
@@ -94,7 +95,7 @@ def delete_all_items_in_cart():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-    
+
 
 @cart_blueprint.route('/delete_item/<int:item_id>', methods=['DELETE', 'OPTIONS'])
 @jwt_required()
@@ -179,8 +180,6 @@ def add_quantity_to_cart(item_id):
 
 
 
-
-
 @cart_blueprint.route('/read', methods=['GET'])
 @jwt_required()
 def get_cart():
@@ -196,12 +195,16 @@ def get_cart():
 
     for cart_item in cart_items:
         product = Product.query.get(cart_item.product_id)
+        nail_size_option = NailSizeOption.query.get(cart_item.nail_size_option_id)
         item_data = {
             'product_id': product.product_id,
             'name': product.name,
             'image': product.image_url,
             'price': product.price,
-            'quantity': cart_item.quantity
+            'quantity': cart_item.quantity,
+            'nail_size_option': nail_size_option.name,
+            'left_hand_custom_size': cart_item.left_hand_custom_size,
+            'right_hand_custom_size': cart_item.right_hand_custom_size
         }
         total_price += product.price * cart_item.quantity
         cart_data['items'].append(item_data)

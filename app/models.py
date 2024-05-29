@@ -12,6 +12,8 @@ def get_current_user():
     user = User.query.get(user_id)
     return user
 
+
+
 class TokenBlocklist(db.Model):
     __tablename__ = 'tokenblocklist'
     id = db.Column(db.Integer, primary_key=True)
@@ -108,6 +110,25 @@ class Product(db.Model):
             "image_url": self.image_url
         }
 
+class NailSizeOption(db.Model):
+    __tablename__ = 'nail_size_option'
+    nail_size_option_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text)
+
+    def __init__(self, name, description=None):
+        self.name = name
+        self.description = description
+
+    def to_dict(self):
+        return {
+            'id': self.nail_size_option_id,
+            'name': self.name,
+            'description': self.description
+        }
+
+    def __repr__(self):
+        return f'<NailSizeOption {self.name}>'
 
 class Order(db.Model):
     __tablename__ = 'order'
@@ -115,19 +136,25 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
     first_name = db.Column(db.String(100))
     last_name = db.Column(db.String(100))
-    address = db.Column (db.String(400))
+    street_address = db.Column(db.String(200))
+    city = db.Column(db.String(100))
+    country = db.Column(db.String(100))
+    postal_code = db.Column(db.String(20))
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     order_items = db.relationship('OrderItem', backref='order', lazy=True)
 
-    def __init__(self, user_id, total_amount, status, first_name=None, last_name=None, address=None, created_at=None):
+    def __init__(self, user_id, total_amount, status, first_name=None, last_name=None, street_address=None, city=None, country=None, postal_code=None, created_at=None):
         self.user_id = user_id
         self.total_amount = total_amount
         self.first_name = first_name
         self.last_name = last_name
-        self.address = address
+        self.street_address = street_address
+        self.city = city
+        self.country = country
+        self.postal_code = postal_code
         self.status = status
         if created_at is not None:
             self.created_at = created_at
@@ -153,7 +180,10 @@ class Order(db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "email": self.user.email,
-            "address": self.address,
+            "street_address": self.street_address,
+            "city": self.city,
+            "country": self.country,
+            "postal_code": self.postal_code,
             "total_amount": self.total_amount,
             "status": self.status,
             "created_at": self.created_at
@@ -167,19 +197,21 @@ class OrderItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
+    nail_size_option_id = db.Column(db.Integer, db.ForeignKey('nail_size_option.nail_size_option_id'), nullable=False)
+    left_hand_custom_size = db.Column(db.String(100))
+    right_hand_custom_size = db.Column(db.String(100))
 
-    def __init__(self, order_id, product_id, quantity, unit_price):
+    def __init__(self, order_id, product_id, quantity, unit_price, nail_size_option_id, left_hand_custom_size=None, right_hand_custom_size=None):
         self.order_id = order_id
         self.product_id = product_id
         self.quantity = quantity
         self.unit_price = unit_price
+        self.nail_size_option_id = nail_size_option_id
+        self.left_hand_custom_size = left_hand_custom_size
+        self.right_hand_custom_size = right_hand_custom_size
 
     def create(self):
         db.session.add(self)
-        db.session.commit()
-
-    def update(self, status):
-        self.status = status
         db.session.commit()
 
     def delete(self):
@@ -187,12 +219,18 @@ class OrderItem(db.Model):
         db.session.commit()
 
     def to_response(self):
+        product = Product.query.get(self.product_id)
+        nail_size_option = NailSizeOption.query.get(self.nail_size_option_id)
         return {
             "order_item_id": self.order_item_id,
             "order_id": self.order_id,
             "product_id": self.product_id,
+            "product_name": product.name,
             "quantity": self.quantity,
-            "unit_price": self.unit_price
+            "unit_price": self.unit_price,
+            "nail_size_option": nail_size_option.name,
+            "left_hand_custom_size": self.left_hand_custom_size,
+            "right_hand_custom_size": self.right_hand_custom_size
         }
 
 class Cart(db.Model):
@@ -234,21 +272,28 @@ class CartItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
+    nail_size_option_id = db.Column(db.Integer, db.ForeignKey('nail_size_option.nail_size_option_id'), nullable=False)
+    left_hand_custom_size = db.Column(db.String(100))
+    right_hand_custom_size = db.Column(db.String(100))
+  
+
 
     product = db.relationship('Product', backref='cart_items', lazy=True)
+    nail_size_option = db.relationship('NailSizeOption', backref='cart_items', lazy=True)
 
-    def __init__(self, cart_id, product_id, quantity, unit_price):
+
+    def __init__(self, cart_id, product_id, quantity, unit_price, nail_size_option_id, left_hand_custom_size=None, right_hand_custom_size=None):
         self.cart_id = cart_id
         self.product_id = product_id
         self.quantity = quantity
         self.unit_price = unit_price
+        self.nail_size_option_id = nail_size_option_id
+        self.left_hand_custom_size = left_hand_custom_size
+        self.right_hand_custom_size = right_hand_custom_size
+
 
     def create(self):
         db.session.add(self)
-        db.session.commit()
-
-    def update(self, status):
-        self.status = status
         db.session.commit()
 
     def delete(self):
@@ -256,11 +301,16 @@ class CartItem(db.Model):
         db.session.commit()
 
     def to_response(self):
+        product = Product.query.get(self.product_id)
+        nail_size_option = NailSizeOption.query.get(self.nail_size_option_id)
         return {
             "cart_item_id": self.cart_item_id,
             "cart_id": self.cart_id,
             "product_id": self.product_id,
+            "product_name": product.name,
             "quantity": self.quantity,
-            "unit_price": self.unit_price
+            "unit_price": self.unit_price,
+            "nail_size_option": nail_size_option.name,
+            "left_hand_custom_size": self.left_hand_custom_size,
+            "right_hand_custom_size": self.right_hand_custom_size
         }
-

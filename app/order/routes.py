@@ -2,10 +2,31 @@ from flask import jsonify, request
 from flask_mail import Message
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mail
-from app.models import db, Order, OrderItem, User, Product, CartItem, Cart
+from app.models import db, Order, OrderItem, User, Product, CartItem, Cart, NailSizeOption
 from flask import Blueprint
 
+
 order_blueprint = Blueprint("order", __name__, url_prefix= "/order" )
+
+from app.models import Order, db
+
+@order_blueprint.route('/api/orders', methods=['POST'])
+def create_order():
+    data = request.get_json()
+    product = data.get('product')
+
+    # Create a new order with the product details
+    order = Order(
+        user_id=1,  # Replace with the actual user ID
+        total_amount=product['price'],
+        status='pending',
+        name=product['name'],
+        price=product['price']
+    )
+    db.session.add(order)
+    db.session.commit()
+
+    return jsonify({'id': order.id, 'name': order.name, 'price': order.price})
 
 # Preliminary Order 
 @order_blueprint.route('/create_preliminary_order', methods=['POST'])
@@ -14,20 +35,12 @@ def create_preliminary_order():
     data = request.json
     user_id = get_jwt_identity()  # Retrieve user ID from JWT
     total_amount = data.get('total_amount')
-    first_name = data.get('first_name')  # Extract first name from request data if available
-    last_name = data.get('last_name')    # Extract last name from request data if available
-    address = data.get('address')        # Extract address from request data if available
+      # Extract address from request data if available
     
     # Create a preliminary order with user information
     order = Order(user_id=user_id, total_amount=total_amount, status='Processing')
     
     # Set first name, last name, and address if available
-    if first_name is not None:
-        order.first_name = first_name
-    if last_name is not None:
-        order.last_name = last_name
-    if address is not None:
-        order.address = address
     
     db.session.add(order)
     db.session.commit()
@@ -35,27 +48,33 @@ def create_preliminary_order():
     return jsonify({'success': True, 'message': 'Preliminary order created successfully', 'order_id': order.order_id}), 201
 
 
-# Order with User Info API route
 @order_blueprint.route('/update_order_with_user_info/<int:order_id>', methods=['PUT'])
 @jwt_required()
 def update_order_with_user_info(order_id):
     order = Order.query.get(order_id)
     if not order:
         return jsonify({'success': False, 'error': 'Order not found'}), 404
-    
+
     data = request.json
     first_name = data.get("first_name")
     last_name = data.get("last_name")
-    address = data.get("address")
-    
+    street_address = data.get("street_address")
+    city = data.get("city")
+    country = data.get("country")
+    postal_code = data.get("postal_code")
+
     # Update order details with user information
     order.first_name = first_name
     order.last_name = last_name
-    order.address = address
+    order.street_address = street_address
+    order.city = city
+    order.country = country
+    order.postal_code = postal_code
     order.status = 'Updating order'  # Set status to 'Updating order'
     db.session.commit()
-    
+
     return jsonify({'success': True, 'message': 'Order updated with user information successfully'}), 200
+
 
 @order_blueprint.route('/finalize_order/<int:order_id>', methods=['PUT'])
 @jwt_required()
@@ -123,3 +142,38 @@ def handle_payment_success():
     
     return jsonify({'message': 'Order status updated successfully'}), 200
 
+@order_blueprint.route('/read/<int:order_id>', methods=['GET'])
+@jwt_required()
+def read_order(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+
+    order_data = {
+        'order_id': order.order_id,
+        'user_id': order.user_id,
+        'email': order.user.email,  # Retrieve the user's email from the User model
+        'first_name': order.first_name,
+        'last_name': order.last_name,
+        'street_address': order.street_address,
+        'city': order.city,
+        'country': order.country,
+        'postal_code': order.postal_code,
+        'total_amount': order.total_amount,
+        'status': order.status,
+        'created_at': order.created_at,
+        'order_items': [
+            {
+                'order_item_id': order_item.order_item_id,
+                'product_id': order_item.product_id,
+                'quantity': order_item.quantity,
+                'unit_price': order_item.unit_price,
+                'nail_size_option_id': order_item.nail_size_option_id,
+                'left_hand_custom_size': order_item.left_hand_custom_size,
+                'right_hand_custom_size': order_item.right_hand_custom_size
+            }
+            for order_item in order.order_items
+        ]
+    }
+
+    return jsonify(order_data), 200

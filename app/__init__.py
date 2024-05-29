@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify,send_from_directory
+from flask import Flask, request, jsonify,send_from_directory,redirect
 from config import Config
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -14,7 +14,37 @@ app = Flask(__name__,static_url_path='/nails', static_folder='nails')
 load_dotenv()
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 stripe.api_key = STRIPE_SECRET_KEY
+
+YOUR_DOMAIN = 'http://localhost:3000'
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
+@app.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    try:
+        data = request.get_json()
+        product = data.get('product')
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': product['name'],
+                    },
+                    'unit_amount': int(product['price'] * 100),  # Amount in cents
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=YOUR_DOMAIN + '/success',
+            cancel_url=YOUR_DOMAIN + '/cancel',
+        )
+
+        return jsonify({'url': session.url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/nails/<path:filename>')
 def uploaded_file(filename):
@@ -60,6 +90,9 @@ from app.user.routes import user_blueprint
 from app.product.routes import product_blueprint
 from app.cart.routes import cart_blueprint
 from app.order.routes import order_blueprint
+from app.nail_sizes.routes import nail_sizes_blueprint
+
+app.register_blueprint(nail_sizes_blueprint)
 
 app.register_blueprint(user_blueprint)
 app.register_blueprint(product_blueprint)
