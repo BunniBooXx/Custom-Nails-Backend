@@ -60,6 +60,7 @@ def update_order_with_user_info(order_id):
     last_name = data.get("last_name")
     street_address = data.get("street_address")
     city = data.get("city")
+    state = data.get("state")
     country = data.get("country")
     postal_code = data.get("postal_code")
 
@@ -68,6 +69,7 @@ def update_order_with_user_info(order_id):
     order.last_name = last_name
     order.street_address = street_address
     order.city = city
+    order.state = state
     order.country = country
     order.postal_code = postal_code
     order.status = 'Updating order'  # Set status to 'Updating order'
@@ -158,6 +160,7 @@ def read_order(order_id):
         'street_address': order.street_address,
         'city': order.city,
         'country': order.country,
+        'state': order.state,
         'postal_code': order.postal_code,
         'total_amount': order.total_amount,
         'status': order.status,

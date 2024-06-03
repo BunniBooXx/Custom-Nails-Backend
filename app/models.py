@@ -138,6 +138,7 @@ class Order(db.Model):
     last_name = db.Column(db.String(100))
     street_address = db.Column(db.String(200))
     city = db.Column(db.String(100))
+    state = db.Column(db.String(100))  # Added state column
     country = db.Column(db.String(100))
     postal_code = db.Column(db.String(20))
     total_amount = db.Column(db.Float, nullable=False)
@@ -146,19 +147,19 @@ class Order(db.Model):
 
     order_items = db.relationship('OrderItem', backref='order', lazy=True)
 
-    def __init__(self, user_id, total_amount, status, first_name=None, last_name=None, street_address=None, city=None, country=None, postal_code=None, created_at=None):
+    def __init__(self, user_id, total_amount, status, first_name=None, last_name=None, street_address=None, city=None, state=None, country=None, postal_code=None, created_at=None):
         self.user_id = user_id
         self.total_amount = total_amount
         self.first_name = first_name
         self.last_name = last_name
         self.street_address = street_address
         self.city = city
+        self.state = state  # Assign state value
         self.country = country
         self.postal_code = postal_code
         self.status = status
         if created_at is not None:
             self.created_at = created_at
-
 
     def create(self):
         db.session.add(self)
@@ -183,6 +184,7 @@ class Order(db.Model):
             "street_address": self.street_address,
             "city": self.city,
             "country": self.country,
+            "state": self.state,
             "postal_code": self.postal_code,
             "total_amount": self.total_amount,
             "status": self.status,
