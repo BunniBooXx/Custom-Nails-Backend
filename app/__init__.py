@@ -5,7 +5,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from app.models import db, User 
+from app.models import db, User , Order
 from datetime import timedelta
 import stripe
 from dotenv import load_dotenv 
@@ -22,20 +22,26 @@ CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET
 def create_checkout_session():
     try:
         data = request.get_json()
-        product = data.get('product')
-
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
+        order_id = data.get('order_id')
+        products = data.get('products')
+        line_items= []
+        order = Order.query.filter_by(order_id=order_id).first()
+        for item in order.order_items:
+            line_items.append({
                 'price_data': {
                     'currency': 'usd',
                     'product_data': {
-                        'name': product['name'],
+                        'name': item.product.name,
                     },
-                    'unit_amount': int(product['price'] * 100),  # Amount in cents
+                    'unit_amount': int(item.product.price * 100),
                 },
-                'quantity': 1,
-            }],
+                'quantity': item.quantity,
+            })
+            
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=line_items,
             mode='payment',
             success_url=YOUR_DOMAIN + '/success',
             cancel_url=YOUR_DOMAIN + '/cancel',

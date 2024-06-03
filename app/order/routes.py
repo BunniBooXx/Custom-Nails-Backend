@@ -75,6 +75,20 @@ def update_order_with_user_info(order_id):
     order.status = 'Updating order'  # Set status to 'Updating order'
     db.session.commit()
 
+    cart = Cart.query.filter_by(user_id=order.user_id).order_by(Cart.created_at.desc()).first()
+    #cart= Cart.query.filter_by(cart_id=4).first()
+    for item in cart.items:
+        # Create an order item for each cart item
+        order_item = OrderItem(
+            order_id=order.order_id,
+            product_id=item.product_id,
+            quantity=item.quantity,
+            unit_price=item.product.price,
+            nail_size_option_id=item.nail_size_option_id
+        )
+        db.session.add(order_item)
+        db.session.commit()
+
     return jsonify({'success': True, 'message': 'Order updated with user information successfully'}), 200
 
 
@@ -89,7 +103,8 @@ def finalize_order(order_id):
     user_id = order.user_id
     cart = Cart.query.filter_by(user_id=user_id).first()
     if not cart:
-        return jsonify({'success': False, 'error': 'Cart not found'}), 404
+        return jsonify({'success': False, 'error': 'Cart not found'}), 404    
+    
 
     # Delete the cart items and the cart
     CartItem.query.filter_by(cart_id=cart.cart_id).delete()
@@ -118,7 +133,16 @@ def send_order_confirmation_email(order):
         msg.body = f"Your order has been received!\nOrder ID: {order.order_id}\nTotal Amount: {order.total_amount}\n\nThank you for shopping with us!"
         mail.send(msg)
 
-# Handle Payment Success API route
+@order_blueprint.route('/details/<int:order_id>', methods=['GET'])
+@jwt_required()
+def order_details(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'success': False, 'error': 'Order not found'}), 404
+    
+    send_order_email(order)
+    send_order_confirmation_email(order)
+
 @order_blueprint.route('/payment_success', methods=['POST'])
 @jwt_required()
 def handle_payment_success():

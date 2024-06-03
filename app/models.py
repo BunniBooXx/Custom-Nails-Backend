@@ -202,6 +202,8 @@ class OrderItem(db.Model):
     nail_size_option_id = db.Column(db.Integer, db.ForeignKey('nail_size_option.nail_size_option_id'), nullable=False)
     left_hand_custom_size = db.Column(db.String(100))
     right_hand_custom_size = db.Column(db.String(100))
+    
+    product = db.relationship('Product', backref='order_items', lazy=True)
 
     def __init__(self, order_id, product_id, quantity, unit_price, nail_size_option_id, left_hand_custom_size=None, right_hand_custom_size=None):
         self.order_id = order_id
