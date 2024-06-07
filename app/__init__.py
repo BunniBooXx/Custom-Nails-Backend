@@ -9,6 +9,7 @@ from app.models import db, User , Order
 from datetime import timedelta
 import stripe
 from dotenv import load_dotenv 
+import logging
 
 app = Flask(__name__,static_url_path='/nails', static_folder='nails')
 load_dotenv()
@@ -18,14 +19,21 @@ stripe.api_key = STRIPE_SECRET_KEY
 YOUR_DOMAIN = 'http://localhost:3000'
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+
+
+
 @app.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     try:
         data = request.get_json()
         order_id = data.get('order_id')
-        products = data.get('products')
-        line_items= []
         order = Order.query.filter_by(order_id=order_id).first()
+
+        # Ensure order and order_items exist
+        if not order or not order.order_items:
+            return jsonify({'error': 'Order not found or no items in the order'}), 400
+
+        line_items = []
         for item in order.order_items:
             line_items.append({
                 'price_data': {
@@ -33,11 +41,10 @@ def create_checkout_session():
                     'product_data': {
                         'name': item.product.name,
                     },
-                    'unit_amount': int(item.product.price * 100),
+                    'unit_amount': int(item.product.price * 100),  # Amount in cents
                 },
                 'quantity': item.quantity,
             })
-            
 
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -50,6 +57,7 @@ def create_checkout_session():
         return jsonify({'url': session.url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/nails/<path:filename>')
