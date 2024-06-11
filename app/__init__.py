@@ -9,6 +9,7 @@ from app.models import db, User , Order
 from datetime import timedelta
 import stripe
 from dotenv import load_dotenv 
+from app.routes.order_routes import order_routes
 import logging
 
 app = Flask(__name__,static_url_path='/nails', static_folder='nails')
@@ -50,7 +51,7 @@ def create_checkout_session():
             payment_method_types=['card'],
             line_items=line_items,
             mode='payment',
-            success_url=YOUR_DOMAIN + '/success',
+            success_url=YOUR_DOMAIN + '/ordersuccesspage',
             cancel_url=YOUR_DOMAIN + '/cancel',
         )
 
@@ -107,7 +108,7 @@ from app.order.routes import order_blueprint
 from app.nail_sizes.routes import nail_sizes_blueprint
 
 app.register_blueprint(nail_sizes_blueprint)
-
+app.register_blueprint(order_routes, url_prefix='/api/orders')
 app.register_blueprint(user_blueprint)
 app.register_blueprint(product_blueprint)
 app.register_blueprint(cart_blueprint)
