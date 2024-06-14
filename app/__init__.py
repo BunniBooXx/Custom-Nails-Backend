@@ -54,7 +54,7 @@ def create_checkout_session():
             payment_method_types=['card'],
             line_items=line_items,
             mode='payment',
-            success_url=YOUR_DOMAIN + '/ordersuccesspage',
+            success_url=YOUR_DOMAIN + f'/ordersuccesspage/{order_id}',
             cancel_url=YOUR_DOMAIN + '/cancel',
         )
 
@@ -77,27 +77,11 @@ def after_request(response):
 
 endpoint_secret = os.getenv('STRIPE_ENDPOINT_SECRET')
 
-def send_email(to_email, subject, body):
-    sender_email = os.getenv('EMAIL_ADDRESS')
-    sender_password = os.getenv('EMAIL_PASSWORD')
-    smtp_server = os.getenv('SMTP_SERVER')
-    smtp_port = os.getenv('SMTP_PORT')
-    
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-    
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, to_email, msg.as_string())
-
 @app.route('/webhook', methods=['POST'])
 def stripe_webhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get('Stripe-Signature')
+    endpoint_secret = os.getenv('STRIPE_ENDPOINT_SECRET')
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
@@ -112,33 +96,60 @@ def stripe_webhook():
 
     if event['type'] == 'payment_intent.succeeded':
         payment_intent = event['data']['object']
-        # Finalize the order and send emails
-        order_details = finalize_order(payment_intent)
-        send_confirmation_emails(order_details)
+        order_id = payment_intent['metadata'].get('order_id')
+        
+        if not order_id:
+            print('Order ID not found in metadata')
+            return jsonify(success=False), 400
+        
+        order = Order.query.get(order_id)
+        if not order:
+            print(f'Order with ID {order_id} not found')
+            return jsonify(success=False), 404
+        
+        # Finalize the order (you can implement this logic as per your requirements)
+        order.finalize_order(payment_intent)
+
+        # Send confirmation emails
+        send_confirmation_emails(order)
 
     return jsonify(success=True)
 
-def finalize_order(payment_intent):
-    # Your logic to finalize the order
-    order_details = {
-        'order_id': '12345',
-        'amount': payment_intent['amount'],
-        'customer_email': payment_intent['receipt_email'],
-    }
-    return order_details
-
-def send_confirmation_emails(order_details):
-    customer_email = order_details['customer_email']
-    order_id = order_details['order_id']
-    
+def send_confirmation_emails(order):
+    # Send confirmation email to customer
+    customer_email = order.customer_email
     customer_subject = 'Order Confirmation'
-    customer_body = f'Thank you for your purchase! Your order ID is {order_id}.'
+    customer_body = f'Thank you for your purchase! Your order ID is {order.order_id}.'
     send_email(customer_email, customer_subject, customer_body)
-    
-    admin_subject = 'New Order Received'
-    admin_body = f'A new order has been placed. Order ID: {order_id}.'
-    send_email(os.getenv('ADMIN_EMAIL'), admin_subject, admin_body)
 
+    # Send notification email to admin
+    admin_email = os.getenv('ADMIN_EMAIL')
+    admin_subject = 'New Order Received'
+    admin_body = f'A new order has been placed. Order ID: {order.order_id}.'
+    send_email(admin_email, admin_subject, admin_body)
+
+def send_email(to_email, subject, body):
+    sender_email = app.config['MAIL_USERNAME']
+    sender_password = app.config['MAIL_PASSWORD']
+    smtp_server = app.config['MAIL_SERVER']
+    smtp_port = app.config['MAIL_PORT']
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, to_email, msg.as_string())
+            print(f"Email sent successfully to {to_email}")
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {str(e)}")
+
+        
 app.config.from_object(Config)
 
 # Initialize Flask-Mail
@@ -161,11 +172,15 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Configure Mail server
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=3)
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
-app.config['MAIL_PORT'] = os.environ.get('MAIL_PORT')
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS')
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+# Configure Mail server
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', True)
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'your_email@example.com')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'your_password')
+
+# Ensure these environment variables are properly set in your .env file or environment
+
 
 # Routes
 from app.user.routes import user_blueprint

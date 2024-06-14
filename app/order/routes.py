@@ -115,13 +115,24 @@ def send_order_confirmation_email(order):
 @order_blueprint.route('/details/<int:order_id>', methods=['GET'])
 @jwt_required()
 def order_details(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        return jsonify({'success': False, 'error': 'Order not found'}), 404
+    try:
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
+        order_items = OrderItem.query.filter_by(order_id=order_id).all()
+        
+        # Example response structure
+        response = {
+            'order_id': order.order_id,
+            'total_amount': order.total_amount,
+            'order_items': [{'product_name': item.product.name, 'quantity': item.quantity} for item in order_items]
+        }
+        
+        return jsonify(response), 200
     
-    order_items = OrderItem.query.filter_by(order_id=order_id).all()
-    send_order_email(order, order_items)
-    send_order_confirmation_email(order)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @order_blueprint.route('/payment_success', methods=['POST'])
 @jwt_required()
