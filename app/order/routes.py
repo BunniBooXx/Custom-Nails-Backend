@@ -70,22 +70,27 @@ def update_order_with_user_info(order_id):
 
     return jsonify({'success': True, 'message': 'Order updated with user information successfully'}), 200
 
-@order_blueprint.route('/finalize_order/<int:order_id>', methods=['PUT'])
-@jwt_required()
-def finalize_order(order_id):
-    order = Order.query.get(order_id)
-    if not order:
-        return jsonify({'success': False, 'error': 'Order not found'}), 404
-    
-    order.status = 'finalized'
-    db.session.commit()
+@order_blueprint.route('/finalize-order', methods=['POST'])
+def finalize_order():
+    try:
+        data = request.get_json()
+        order_id = data.get('orderId')
+        amount = data.get('amount')
 
-    # Send confirmation emails
-    order_items = OrderItem.query.filter_by(order_id=order_id).all()
-    send_order_email(order, order_items)
-    send_order_confirmation_email(order)
+        order = Order.query.get(order_id)
+        if order:
+            order.status = 'paid'
+            order.total_amount = amount / 100  # Convert from cents to dollars
+            db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Order finalized successfully'}), 200
+            send_order_confirmation_email(order)
+
+            return jsonify({'clientSecret': 'dummy_client_secret'})
+        else:
+            return jsonify({'error': 'Order not found'}), 404
+    except Exception as e:
+        print(f'Error finalizing order: {e}')
+        return jsonify({'error': 'Internal server error'}), 500
 
 def send_order_email(order, order_items):
     msg = Message("New Order Received",

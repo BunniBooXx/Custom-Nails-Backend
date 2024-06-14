@@ -8,6 +8,9 @@ from flask_cors import CORS
 from app.models import db, User , Order
 from datetime import timedelta
 import stripe
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv 
 from app.routes.order_routes import order_routes
 import logging
@@ -71,6 +74,70 @@ def after_request(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
+
+endpoint_secret = os.getenv('STRIPE_ENDPOINT_SECRET')
+
+def send_email(to_email, subject, body):
+    sender_email = os.getenv('EMAIL_ADDRESS')
+    sender_password = os.getenv('EMAIL_PASSWORD')
+    smtp_server = os.getenv('SMTP_SERVER')
+    smtp_port = os.getenv('SMTP_PORT')
+    
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+    
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, to_email, msg.as_string())
+
+@app.route('/webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError as e:
+        # Invalid payload
+        print('Invalid payload')
+        return jsonify(success=False), 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        print('Invalid signature')
+        return jsonify(success=False), 400
+
+    if event['type'] == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        # Finalize the order and send emails
+        order_details = finalize_order(payment_intent)
+        send_confirmation_emails(order_details)
+
+    return jsonify(success=True)
+
+def finalize_order(payment_intent):
+    # Your logic to finalize the order
+    order_details = {
+        'order_id': '12345',
+        'amount': payment_intent['amount'],
+        'customer_email': payment_intent['receipt_email'],
+    }
+    return order_details
+
+def send_confirmation_emails(order_details):
+    customer_email = order_details['customer_email']
+    order_id = order_details['order_id']
+    
+    customer_subject = 'Order Confirmation'
+    customer_body = f'Thank you for your purchase! Your order ID is {order_id}.'
+    send_email(customer_email, customer_subject, customer_body)
+    
+    admin_subject = 'New Order Received'
+    admin_body = f'A new order has been placed. Order ID: {order_id}.'
+    send_email(os.getenv('ADMIN_EMAIL'), admin_subject, admin_body)
 
 app.config.from_object(Config)
 
