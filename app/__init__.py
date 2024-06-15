@@ -1,30 +1,24 @@
 import os
-from flask import Flask, request, jsonify,send_from_directory,redirect
+from flask import Flask, request, jsonify, send_from_directory 
+
 from config import Config
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from app.models import db, User , Order
+from app.models import db, User, Order
 from datetime import timedelta
 import stripe
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from dotenv import load_dotenv 
-from app.routes.order_routes import order_routes
-import logging
+from dotenv import load_dotenv
 
-app = Flask(__name__,static_url_path='/nails', static_folder='nails')
+app = Flask(__name__, static_url_path='/nails', static_folder='nails')
 load_dotenv()
+
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 stripe.api_key = STRIPE_SECRET_KEY
 
 YOUR_DOMAIN = 'http://localhost:3000'
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-
-
-
 
 @app.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
@@ -62,8 +56,6 @@ def create_checkout_session():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-
 @app.route('/nails/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.static_folder, os.path.join('static\nails', filename))
@@ -75,81 +67,39 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
-endpoint_secret = os.getenv('STRIPE_ENDPOINT_SECRET')
-
-@app.route('/webhook', methods=['POST'])
-def stripe_webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get('Stripe-Signature')
-    endpoint_secret = os.getenv('STRIPE_ENDPOINT_SECRET')
+@app.route('/send-emails', methods=['POST'])
+def send_emails():
+    order_id = request.json.get('orderId')
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except ValueError as e:
-        # Invalid payload
-        print('Invalid payload')
-        return jsonify(success=False), 400
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
-        print('Invalid signature')
-        return jsonify(success=False), 400
+        # Fetch order details from your database
+        order = fetch_order_from_database(order_id)
 
-    if event['type'] == 'payment_intent.succeeded':
-        payment_intent = event['data']['object']
-        order_id = payment_intent['metadata'].get('order_id')
-        
-        if not order_id:
-            print('Order ID not found in metadata')
-            return jsonify(success=False), 400
-        
-        order = Order.query.get(order_id)
-        if not order:
-            print(f'Order with ID {order_id} not found')
-            return jsonify(success=False), 404
-        
-        # Finalize the order (you can implement this logic as per your requirements)
-        order.finalize_order(payment_intent)
+        # Send email to customer
+        customer_email = Message(
+            'Order Confirmation',
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[order.customer_email]
+        )
+        customer_email.body = f"Thank you for your order! Your order ID is {order_id}."
+        mail.send(customer_email)
 
-        # Send confirmation emails
-        send_confirmation_emails(order)
+        # Send email to developer
+        developer_email = Message(
+            'New Order Received',
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[app.config['DEVELOPER_EMAIL']]
+        )
+        developer_email.body = f"A new order (ID: {order_id}) has been placed."
+        mail.send(developer_email)
 
-    return jsonify(success=True)
+        # Update order status in the database
+        update_order_status_in_database(order_id, 'PAID')
 
-def send_confirmation_emails(order):
-    # Send confirmation email to customer
-    customer_email = order.customer_email
-    customer_subject = 'Order Confirmation'
-    customer_body = f'Thank you for your purchase! Your order ID is {order.order_id}.'
-    send_email(customer_email, customer_subject, customer_body)
-
-    # Send notification email to admin
-    admin_email = os.getenv('ADMIN_EMAIL')
-    admin_subject = 'New Order Received'
-    admin_body = f'A new order has been placed. Order ID: {order.order_id}.'
-    send_email(admin_email, admin_subject, admin_body)
-
-def send_email(to_email, subject, body):
-    sender_email = app.config['MAIL_USERNAME']
-    sender_password = app.config['MAIL_PASSWORD']
-    smtp_server = app.config['MAIL_SERVER']
-    smtp_port = app.config['MAIL_PORT']
-
-    msg = MIMEMultipart()
-    msg['From'] = sender_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
-
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, to_email, msg.as_string())
-            print(f"Email sent successfully to {to_email}")
+        return jsonify({'success': True})
     except Exception as e:
-        print(f"Failed to send email to {to_email}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
-        
 app.config.from_object(Config)
 
 # Initialize Flask-Mail
@@ -170,23 +120,25 @@ stripe.api_key = STRIPE_SECRET_KEY
 # Define CORS headers
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-# Configure Mail server
+# Configure JWT Access Token Expiration
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=3)
+
 # Configure Mail server
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', True)
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'your_email@example.com')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'your_password')
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['DEVELOPER_EMAIL'] = os.getenv('DEVELOPER_EMAIL')
 
 # Ensure these environment variables are properly set in your .env file or environment
-
 
 # Routes
 from app.user.routes import user_blueprint
 from app.product.routes import product_blueprint
 from app.cart.routes import cart_blueprint
 from app.order.routes import order_blueprint
+from app.routes.order_routes import order_routes
 from app.nail_sizes.routes import nail_sizes_blueprint
 
 app.register_blueprint(nail_sizes_blueprint)
@@ -195,7 +147,6 @@ app.register_blueprint(user_blueprint)
 app.register_blueprint(product_blueprint)
 app.register_blueprint(cart_blueprint)
 app.register_blueprint(order_blueprint)
-
 
 # JWT Configurations
 @jwt.user_identity_loader
