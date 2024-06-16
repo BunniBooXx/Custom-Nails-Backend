@@ -1,7 +1,5 @@
 from flask import jsonify, request
-from flask_mail import Message
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app import mail
 from app.models import db, Order, OrderItem, User, Product, CartItem, Cart, NailSizeOption
 from flask import Blueprint
 
@@ -70,46 +68,6 @@ def update_order_with_user_info(order_id):
 
     return jsonify({'success': True, 'message': 'Order updated with user information successfully'}), 200
 
-@order_blueprint.route('/finalize-order', methods=['POST'])
-def finalize_order():
-    try:
-        data = request.get_json()
-        order_id = data.get('orderId')
-        amount = data.get('amount')
-
-        order = Order.query.get(order_id)
-        if order:
-            order.status = 'paid'
-            order.total_amount = amount / 100  # Convert from cents to dollars
-            db.session.commit()
-
-            send_order_confirmation_email(order)
-
-            return jsonify({'clientSecret': 'dummy_client_secret'})
-        else:
-            return jsonify({'error': 'Order not found'}), 404
-    except Exception as e:
-        print(f'Error finalizing order: {e}')
-        return jsonify({'error': 'Internal server error'}), 500
-
-def send_order_email(order, order_items):
-    msg = Message("New Order Received",
-                  sender="bunnybubblenails@gmail.com",
-                  recipients=["bunnybubblenails@gmail.com"])
-    msg.body = f"New order received!\nOrder ID: {order.order_id}\nTotal Amount: {order.total_amount}\n\nProducts:\n"
-    for item in order_items:
-        product = Product.query.get(item.product_id)
-        msg.body += f"Product ID: {item.product_id}\nName: {product.name}\nQuantity: {item.quantity}\nUnit Price: {item.unit_price}\n\n"
-    mail.send(msg)
-
-def send_order_confirmation_email(order):
-    user = User.query.get(order.user_id)
-    if user:
-        msg = Message("Order Confirmation",
-                      sender="bunnybubblenails@gmail.com",
-                      recipients=[user.email])  # Assuming you have an 'email' field in your User model
-        msg.body = f"Your order has been received!\nOrder ID: {order.order_id}\nTotal Amount: {order.total_amount}\n\nThank you for shopping with us!"
-        mail.send(msg)
 
 
 @order_blueprint.route('/details/<int:order_id>', methods=['GET'])
@@ -134,31 +92,6 @@ def order_details(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@order_blueprint.route('/payment_success', methods=['POST'])
-@jwt_required()
-def handle_payment_success():
-    # Process the payment success webhook from Stripe
-    order_id = request.json.get('order_id')
-    if not order_id:
-        return jsonify({'error': 'Order ID not provided in webhook payload'}), 400
-    
-    order = Order.query.get(order_id)
-    if not order:
-        return jsonify({'error': 'Order not found'}), 404
-    
-    # Update order status to indicate payment success
-    order.status = 'Processing'  # Or any other appropriate status
-    db.session.commit()
-
-     
-    # Send order confirmation email to shop owner
-    order_items = OrderItem.query.filter_by(order_id=order_id).all()
-    send_order_email(order, order_items)
-
-    # Send order confirmation email to user
-    send_order_confirmation_email(order)
-    
-    return jsonify({'message': 'Order status updated successfully'}), 200
 
 @order_blueprint.route('/read/<int:order_id>', methods=['GET'])
 @jwt_required()

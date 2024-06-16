@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Confirmation</title>
+    <style>
+        /* Font */
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+        }
+
+        /* Headings */
+        h1, h2, h3, h4 {
+            color: #ff69b4; /* Hot pink */
+            font-weight: bold;
+        }
+
+        /* Links */
+        a {
+            color: #ff1493; /* Deep pink */
+            text-decoration: none;
+        }
+
+        /* List */
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 20px;
+        }
+
+        /* Image */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Order Confirmation</h1>
+    <p>Dear Customer,</p>
+    <p>Thank you for your order! Here are the details:</p>
+
+    <h2>Order #{{ order.order_id }}</h2>
+    <p>Total Amount: ${{ '{:.2f}'.format(total_amount) }}</p>
+
+    <h3>Order Items:</h3>
+    <ul>
+        {% for item in order_items %}
+        <li>
+            <h4>{{ item.product.name }}</h4>
+            <p>Quantity: {{ item.quantity }}</p>
+            <p>Nail Size Option: {{ item.nail_size_option_id.name }}</p>
+            <p>Left Hand Custom Size: {{ item.left_hand_custom_size or 'N/A' }}</p>
+            <p>Right Hand Custom Size: {{ item.right_hand_custom_size or 'N/A' }}</p>
+            <p>Unit Price: ${{ '{:.2f}'.format(item.unit_price) }}</p>
+            {% if item.product.image_url %}
+            <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}">
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+
+    <p>Thank you for your business!</p>
+    <div class="footer">
+        <p>Best regards,</p>
+        <p>Bunny Bubbles Nails</p>
+        <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Bunny Bubbles Nails Logo">
+    </div>
+</body>
+</html>
+

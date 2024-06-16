@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Order Received</title>
+    <style>
+        /* Font */
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+        }
+
+        /* Headings */
+        h1, h2, h3 {
+            color: #ff69b4; /* Hot pink */
+            font-weight: bold;
+        }
+
+        /* Links */
+        a {
+            color: #ff1493; /* Deep pink */
+            text-decoration: none;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        /* Image */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>New Order Received</h1>
+    <p>Order #{{ order.order_id }}</p>
+    <p>Total Amount: ${{ '{:.2f}'.format(total_amount) }}</p>
+
+    <h2>Customer Details:</h2>
+    <table>
+        <tr>
+            <th>Name</th>
+            <td>{{ order.first_name }} {{ order.last_name }}</td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ order.user.email }}</td>
+        </tr>
+        <tr>
+            <th>Address</th>
+            <td>{{ order.street_address }}, {{ order.city }}, {{ order.state }}, {{ order.country }} {{ order.postal_code }}</td>
+        </tr>
+    </table>
+
+    <h2>Order Items:</h2>
+    {% for item in order_items %}
+    <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;">
+        <h3>{{ item.product.name }}</h3>
+        <p>Quantity: {{ item.quantity }}</p>
+        <p>Nail Size Option: {{ item.nail_size_option_id.name }}</p>
+        <p>Left Hand Custom Size: {{ item.left_hand_custom_size or 'N/A' }}</p>
+        <p>Right Hand Custom Size: {{ item.right_hand_custom_size or 'N/A' }}</p>
+        <p>Unit Price: ${{ '{:.2f}'.format(item.unit_price) }}</p>
+        {% if item.product.image_url %}
+        <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}">
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="footer">
+        <p>Best regards,</p>
+        <p>Bunny Bubbles Nails</p>
+        <img src="{{ url_for('static', filename='logo.jpg') }}" alt="Bunny Bubbles Nails Logo">
+    </div>
+</body>
+</html>

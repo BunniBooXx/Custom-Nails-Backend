@@ -40,6 +40,7 @@ class User(db.Model):
     
     orders = db.relationship('Order', backref='user', lazy=True)
     carts = db.relationship('Cart', backref='user', lazy=True)
+   
 
     def __init__(self, username, email, password, avatar_image=None):
         self.username = username
