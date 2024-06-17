@@ -3,7 +3,7 @@
 <head>
     <title>Order Confirmation</title>
     <style>
-        /* Font */
+        /* Font and basic styles */
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #333;
@@ -46,15 +46,15 @@
 </head>
 <body>
     <h1>Order Confirmation</h1>
-    <p>Dear Customer,</p>
+    <p>Dear {{ username }},</p>
     <p>Thank you for your order! Here are the details:</p>
 
     <h2>Order #{{ order.order_id }}</h2>
-    <p>Total Amount: ${{ '{:.2f}'.format(total_amount) }}</p>
+    <p>Total Amount: ${{ '{:.2f}'.format(order.total_amount) }}</p>
 
     <h3>Order Items:</h3>
     <ul>
-        {% for item in order_items %}
+        {% for item in order.order_items %}
         <li>
             <h4>{{ item.product.name }}</h4>
             <p>Quantity: {{ item.quantity }}</p>
@@ -77,4 +77,3 @@
     </div>
 </body>
 </html>
-

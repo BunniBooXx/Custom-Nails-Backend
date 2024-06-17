@@ -26,7 +26,15 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER=os.environ.get("MAILJET_FROM_EMAIL")
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
+    TOKEN_URI= os.environ.get('TOKEN_URI')
 
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+    CLIENT_EMAIL= os.getenv('CLIENT_EMAIL')
+
+
+
+    SERVICE_ACCOUNT_FILE = os.getenv('SERVICE_ACCOUNT_FILE')
   
 
     # JWT
