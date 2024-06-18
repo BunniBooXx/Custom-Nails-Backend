@@ -130,8 +130,16 @@ def index():
 
 
 if __name__ == '__main__':
-    # Use 0.0.0.0 to listen on all public IPs if deploying on a server
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)), debug=True)
+    # Determine the host and port based on environment
+    if os.getenv('FLASK_ENV') == 'development':
+        # Development settings
+        host = '127.0.0.1'
+        port = 5000
+    else:
+        # Production or other environment settings
+        host = 'custom-nails-backend.onrender.com'
+        port = 443  # Assuming Render uses HTTPS by default
 
+    app.run(host=host, port=port, debug=True)
 
 
