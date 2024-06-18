@@ -127,9 +127,11 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
+
+
 if __name__ == '__main__':
     # Use 0.0.0.0 to listen on all public IPs if deploying on a server
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)), debug=True)
 
 
 
