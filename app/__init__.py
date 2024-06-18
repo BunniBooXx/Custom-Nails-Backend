@@ -62,7 +62,7 @@ def oauth2_callback():
     credentials = flow.credentials
 
     session['credentials'] = credentials_to_dict(credentials)
-    return redirect(url_for('send_email'))
+    return redirect(url_for('send_email'))  # Redirect to send_email route after storing credentials
 
 def credentials_to_dict(credentials):
     return {
@@ -78,6 +78,9 @@ def credentials_to_dict(credentials):
 @jwt_required()
 def send_email():
     current_user_id = get_jwt_identity()
+
+    if 'credentials' not in session:
+        return redirect(url_for('authorize'))  # Redirect to authorize route if no credentials in session
 
     if not request.is_json:
         return jsonify({'error': 'Unsupported Media Type. Expected application/json.'}), 415
@@ -127,7 +130,6 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
-
 
 if __name__ == '__main__':
     # Determine the host and port based on environment
