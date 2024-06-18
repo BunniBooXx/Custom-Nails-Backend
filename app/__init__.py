@@ -12,25 +12,24 @@ from app.models import User, Order, db
 import base64
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
-app.config.from_object(os.getenv('APP_SETTINGS'))  # Ensure APP_SETTINGS points to your config file
+app.config.from_object(os.getenv('APP_SETTINGS'))
+
+print(f"Using configuration: {os.getenv('APP_SETTINGS')}")
 
 mail = Mail(app)
 jwt = JWTManager(app)
 
-# Update CORS configuration to include both localhost and hosted frontend
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 db.init_app(app)
 
-# Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
+print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 
-print(f"CLIENT_SECRETS_FILE: {CLIENT_SECRETS_FILE}")
-
-# Check if the client secrets file exists
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
@@ -39,7 +38,7 @@ def authorize():
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
-        redirect_uri=url_for('oauth2_callback', _external=True)  # Ensure this matches the URI in Google Cloud Console
+        redirect_uri=url_for('oauth2_callback', _external=True)
     )
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -55,7 +54,7 @@ def oauth2_callback():
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         state=state,
-        redirect_uri=url_for('oauth2_callback', _external=True)  # Ensure this matches the URI in Google Cloud Console
+        redirect_uri=url_for('oauth2_callback', _external=True)
     )
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
@@ -125,23 +124,17 @@ def send_message(service, user_id, message):
         raise
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+print(f"JWT Secret Key: {app.config['JWT_SECRET_KEY']}")
 
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
 
 if __name__ == '__main__':
-    # Determine the host and port based on environment
-    if os.getenv('FLASK_ENV') == 'development':
-        # Development settings
-        host = '127.0.0.1'
-        port = 5000
-    else:
-        # Production or other environment settings
-        host = '0.0.0.0'
-        port = int(os.getenv('PORT', 10000))  # Using the correct port for Render
+    port = int(os.getenv('PORT', 10000))  # Using the port provided by the Render platform
+    print(f"Starting app on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
 
-    app.run(host=host, port=port, debug=True)
 
 
 
