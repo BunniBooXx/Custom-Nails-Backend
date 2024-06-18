@@ -131,9 +131,19 @@ def index():
     return 'Welcome to your Flask application!'
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 10000))  # Using the port provided by the Render platform
-    print(f"Starting app on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Determine the host and port based on environment
+    if os.getenv('FLASK_ENV') == 'development':
+        # Development settings
+        host = '127.0.0.1'
+        port = 5000
+    else:
+        # Production settings (Render)
+        host = '0.0.0.0'
+        port = int(os.getenv('PORT', 10000))  # Using the port provided by the Render platform
+
+    print(f"Starting app on {host}:{port}")
+    app.run(host=host, port=port, debug=True)
+
 
 
 
