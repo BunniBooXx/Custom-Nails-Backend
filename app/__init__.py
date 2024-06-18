@@ -130,20 +130,25 @@ print(f"JWT Secret Key: {app.config['JWT_SECRET_KEY']}")
 def index():
     return 'Welcome to your Flask application!'
 
-if __name__ == '__main__':
-    # Determine the host and port based on environment
-    if os.getenv('FLASK_ENV') == 'development':
-        # Development settings
-        host = '127.0.0.1'
-        port = 5000
-    else:
-        # Production or other environment settings
-        host = 'custom-nails-backend.onrender.com'
-        port = 443  # Assuming Render uses HTTPS by default
-        host = '0.0.0.0'
-        port = int(os.getenv('PORT', 1000))  # Using the correct port for Render
+import logging
 
-    app.run(host=host, port=port, debug=True)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+if __name__ == '__main__':
+    env = os.getenv('FLASK_ENV')
+    port = int(os.getenv('PORT', 1000))
+
+    logger.info(f"Environment: {env}")
+    logger.info(f"Starting server on {host}:{port}")
+
+    if env == 'development':
+        host = '127.0.0.1'
+    else:
+        host = '0.0.0.0'
+
+    app.run(host=host, port=port, debug=(env == 'development'))
+
 
 
 
