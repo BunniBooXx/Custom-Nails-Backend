@@ -130,5 +130,6 @@ def index():
 
 if __name__ == '__main__':
     # Use 0.0.0.0 to listen on all public IPs if deploying on a server
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
+    app.run(host='custom-nails-backend.onrender.com', port=int(os.getenv('PORT', 5000)), debug=True)
+
 
