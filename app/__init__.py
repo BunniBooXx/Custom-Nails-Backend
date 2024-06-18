@@ -130,24 +130,9 @@ print(f"JWT Secret Key: {app.config['JWT_SECRET_KEY']}")
 def index():
     return 'Welcome to your Flask application!'
 
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 if __name__ == '__main__':
-    env = os.getenv('FLASK_ENV')
     port = int(os.getenv('PORT', 1000))
-
-    if env == 'development':
-        host = '127.0.0.1'
-    else:
-        host = '0.0.0.0'
-
-    app.run(host=host, port=port, debug=(env == 'development'))
-    
-    logger.info(f"Environment: {env}")
-    logger.info(f"Starting server on {host}:{port}")
+    app.run(host='0.0.0.0', port=port)
 
 
 
