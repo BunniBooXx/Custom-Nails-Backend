@@ -141,7 +141,7 @@ if __name__ == '__main__':
         host = 'custom-nails-backend.onrender.com'
         port = 443  # Assuming Render uses HTTPS by default
         host = '0.0.0.0'
-        port = int(os.getenv('PORT', 10000))  # Using the correct port for Render
+        port = int(os.getenv('PORT', 1000))  # Using the correct port for Render
 
     app.run(host=host, port=port, debug=True)
 
