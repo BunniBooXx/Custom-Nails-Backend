@@ -139,15 +139,16 @@ if __name__ == '__main__':
     env = os.getenv('FLASK_ENV')
     port = int(os.getenv('PORT', 1000))
 
-    logger.info(f"Environment: {env}")
-    logger.info(f"Starting server on {host}:{port}")
-
     if env == 'development':
         host = '127.0.0.1'
     else:
         host = '0.0.0.0'
 
     app.run(host=host, port=port, debug=(env == 'development'))
+    
+    logger.info(f"Environment: {env}")
+    logger.info(f"Starting server on {host}:{port}")
+
 
 
 
