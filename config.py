@@ -16,22 +16,14 @@ class Config:
 
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
 
-    # Mail settings
-    MAIL_SERVER = os.environ.get("MAIL_SERVER")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT"))
-    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS")
-    MAILJET_API_KEY= os.environ.get("MAILJET_API_KEY")
-    MAILJET_SECRET_KEY = os.environ.get("MAILJET_SECRET_KEY")
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER=os.environ.get("MAILJET_FROM_EMAIL")
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
     TOKEN_URI= os.environ.get('TOKEN_URI')
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-    CLIENT_SECRET=os.environ.get('CLIENT_SECRET')
+    CLIENT_SECRETS_FILE=os.environ.get('CLIENT_SECRETS_FILE')
     CLIENT_EMAIL= os.environ.get('CLIENT_EMAIL')
+    APP_SETTINGS= os.environ.get('APP_SETTINGS')
 
 
 

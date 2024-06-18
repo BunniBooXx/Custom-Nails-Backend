@@ -15,7 +15,9 @@ app = Flask(__name__, template_folder='templates', static_url_path='/nails', sta
 app.config.from_object(os.getenv('APP_SETTINGS'))  # Ensure APP_SETTINGS points to your config file
 mail = Mail(app)
 jwt = JWTManager(app)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
+# Update CORS configuration to include both localhost and hosted frontend
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 
@@ -23,7 +25,7 @@ db.init_app(app)
 
 # Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRET')
+CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRETS_FILE')
 
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
