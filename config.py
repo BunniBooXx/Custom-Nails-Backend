@@ -24,7 +24,7 @@ class Config:
     CLIENT_SECRETS_FILE=os.environ.get('CLIENT_SECRETS_FILE')
     CLIENT_EMAIL= os.environ.get('CLIENT_EMAIL')
     APP_SETTINGS= os.environ.get('APP_SETTINGS')
-    PORT=os.environ.get('PORT')
+
 
 
 
