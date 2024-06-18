@@ -27,8 +27,13 @@ db.init_app(app)
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRETS_FILE')
 
-if not os.path.exists(CLIENT_SECRETS_FILE):
-    raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
+# Function to get Gmail service using stored credentials
+def get_gmail_service():
+    if 'credentials' not in session:
+        raise ValueError("No credentials in session")
+    
+    credentials = Credentials(**session['credentials'])
+    return build('gmail', 'v1', credentials=credentials)
 
 @app.route('/authorize')
 def authorize():
@@ -69,13 +74,6 @@ def credentials_to_dict(credentials):
         'scopes': credentials.scopes
     }
 
-def get_gmail_service():
-    if 'credentials' not in session:
-        raise ValueError("No credentials in session")
-    
-    credentials = Credentials(**session['credentials'])
-    return build('gmail', 'v1', credentials=credentials)
-
 @app.route('/send-email', methods=['POST'])
 @jwt_required()
 def send_email():
@@ -96,8 +94,12 @@ def send_email():
     try:
         service = get_gmail_service()
 
+        user = User.query.get(current_user_id)  # Fetch user details
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
         message = create_message(recipient, subject, body)
-        send_message(service, 'me', message)
+        send_message(service, user.email, message)  # Send email associated with user's email
 
         return jsonify({'message': 'Email sent successfully'}), 200
     
@@ -111,9 +113,9 @@ def create_message(recipient, subject, body):
     raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
     return raw_message
 
-def send_message(service, user_id, message):
+def send_message(service, user_email, message):
     try:
-        message = service.users().messages().send(userId=user_id, body=message).execute()
+        message = service.users().messages().send(userId=user_email, body=message).execute()
         print('Message Id: %s' % message['id'])
         return message
     except Exception as error:
