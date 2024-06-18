@@ -8,6 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
+from flask_session import Session
 from app.models import User, Order, db
 import base64
 
@@ -24,7 +25,17 @@ CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')  # Ensure a secret key is set for session management
+# Ensure a secret key is set for session management
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
+
+# Flask-Session setup
+app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem for simplicity, change to Redis or other for production
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'flask-session:'
+app.config['SESSION_FILE_DIR'] = '/tmp/flask-session/'  # Ensure this directory exists and is writable
+
+Session(app)
 
 db.init_app(app)
 
@@ -65,6 +76,7 @@ def oauth2_callback():
     credentials = flow.credentials
 
     session['credentials'] = credentials_to_dict(credentials)
+    print("Credentials stored in session:", session['credentials'])  # Debug statement
     return redirect(url_for('send_email'))
 
 def credentials_to_dict(credentials):
@@ -79,6 +91,7 @@ def credentials_to_dict(credentials):
 
 def get_gmail_service():
     if 'credentials' not in session:
+        print("No credentials found in session")  # Debug statement
         raise ValueError("No credentials in session")
     
     credentials = Credentials(**session['credentials'])
@@ -138,6 +151,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
