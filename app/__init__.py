@@ -1,14 +1,13 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
 from email.mime.text import MIMEText
-from app.models import User, Order,db
+from app.models import User, Order, db
 import base64
 import os
 
@@ -18,19 +17,56 @@ mail = Mail(app)
 jwt = JWTManager(app)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 
-db.init_app(app) 
+db.init_app(app)
+
 # Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-SERVICE_ACCOUNT_FILE = os.getenv('SERVICE_ACCOUNT_FILE')
-DEVELOPER_EMAIL = os.getenv('DEVELOPER_EMAIL')
+CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRET')
+
+@app.route('/authorize')
+def authorize():
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=SCOPES,
+        redirect_uri=url_for('oauth2_callback', _external=True)
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    session['state'] = state
+    return redirect(authorization_url)
+
+@app.route('/oauth2/callback')
+def oauth2_callback():
+    state = session['state']
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=SCOPES,
+        state=state,
+        redirect_uri=url_for('oauth2_callback', _external=True)
+    )
+    flow.fetch_token(authorization_response=request.url)
+    credentials = flow.credentials
+
+    session['credentials'] = credentials_to_dict(credentials)
+    return redirect(url_for('send_email'))
+
+def credentials_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
 
 def get_gmail_service():
-    flow = InstalledAppFlow.from_client_secrets_file(SERVICE_ACCOUNT_FILE, SCOPES)
-    creds = flow.run_local_server(port=0)
-    return build('gmail', 'v1', credentials=creds)
+    credentials = Credentials(**session['credentials'])
+    return build('gmail', 'v1', credentials=credentials)
 
 @app.route('/send-email', methods=['POST'])
 @jwt_required()
@@ -76,9 +112,11 @@ def send_message(service, user_id, message):
         raise
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
+

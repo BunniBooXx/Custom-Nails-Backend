@@ -28,13 +28,14 @@ class Config:
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
     TOKEN_URI= os.environ.get('TOKEN_URI')
 
-    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    CLIENT_EMAIL= os.getenv('CLIENT_EMAIL')
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    CLIENT_SECRET=os.environ.get('CLIENT_SECRET')
+    CLIENT_EMAIL= os.environ.get('CLIENT_EMAIL')
 
 
 
-    SERVICE_ACCOUNT_FILE = os.getenv('SERVICE_ACCOUNT_FILE')
+    SERVICE_ACCOUNT_FILE = os.environ.get('SERVICE_ACCOUNT_FILE')
   
 
     # JWT
