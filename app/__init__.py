@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
@@ -25,15 +26,15 @@ db.init_app(app)
 
 # Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRETS_FILE')
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config/client_secrets.json')
 
-# Function to get Gmail service using stored credentials
-def get_gmail_service():
-    if 'credentials' not in session:
-        raise ValueError("No credentials in session")
-    
-    credentials = Credentials(**session['credentials'])
-    return build('gmail', 'v1', credentials=credentials)
+import os
+
+print(f"CLIENT_SECRETS_FILE: {CLIENT_SECRETS_FILE}")
+
+# Check if the client secrets file exists
+if not os.path.exists(CLIENT_SECRETS_FILE):
+    raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
 @app.route('/authorize')
 def authorize():
@@ -62,7 +63,7 @@ def oauth2_callback():
     credentials = flow.credentials
 
     session['credentials'] = credentials_to_dict(credentials)
-    return redirect(url_for('send_email'))  # Redirect to send_email route after storing credentials
+    return redirect(url_for('send_email'))
 
 def credentials_to_dict(credentials):
     return {
@@ -74,13 +75,17 @@ def credentials_to_dict(credentials):
         'scopes': credentials.scopes
     }
 
+def get_gmail_service():
+    if 'credentials' not in session:
+        raise ValueError("No credentials in session")
+    
+    credentials = Credentials(**session['credentials'])
+    return build('gmail', 'v1', credentials=credentials)
+
 @app.route('/send-email', methods=['POST'])
 @jwt_required()
 def send_email():
     current_user_id = get_jwt_identity()
-
-    if 'credentials' not in session:
-        return redirect(url_for('authorize'))  # Redirect to authorize route if no credentials in session
 
     if not request.is_json:
         return jsonify({'error': 'Unsupported Media Type. Expected application/json.'}), 415
@@ -97,12 +102,8 @@ def send_email():
     try:
         service = get_gmail_service()
 
-        user = User.query.get(current_user_id)  # Fetch user details
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-
         message = create_message(recipient, subject, body)
-        send_message(service, user.email, message)  # Send email associated with user's email
+        send_message(service, 'me', message)
 
         return jsonify({'message': 'Email sent successfully'}), 200
     
@@ -116,9 +117,9 @@ def create_message(recipient, subject, body):
     raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
     return raw_message
 
-def send_message(service, user_email, message):
+def send_message(service, user_id, message):
     try:
-        message = service.users().messages().send(userId=user_email, body=message).execute()
+        message = service.users().messages().send(userId=user_id, body=message).execute()
         print('Message Id: %s' % message['id'])
         return message
     except Exception as error:
@@ -139,9 +140,10 @@ if __name__ == '__main__':
         port = 5000
     else:
         # Production or other environment settings
-        host = 'custom-nails-backend.onrender.com'
-        port = 443  # Assuming Render uses HTTPS by default
+        host = '0.0.0.0'
+        port = int(os.getenv('PORT', 10000))  # Using the correct port for Render
 
     app.run(host=host, port=port, debug=True)
+
 
 
