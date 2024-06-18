@@ -25,12 +25,15 @@ db.init_app(app)
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRET')
 
+if not os.path.exists(CLIENT_SECRETS_FILE):
+    raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
+
 @app.route('/authorize')
 def authorize():
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
-        redirect_uri=url_for('oauth2_callback', _external=True)
+        redirect_uri=url_for('oauth2_callback', _external=True)  # Ensure this matches the URI in Google Cloud Console
     )
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -46,7 +49,7 @@ def oauth2_callback():
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         state=state,
-        redirect_uri=url_for('oauth2_callback', _external=True)
+        redirect_uri=url_for('oauth2_callback', _external=True)  # Ensure this matches the URI in Google Cloud Console
     )
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
@@ -65,6 +68,9 @@ def credentials_to_dict(credentials):
     }
 
 def get_gmail_service():
+    if 'credentials' not in session:
+        raise ValueError("No credentials in session")
+    
     credentials = Credentials(**session['credentials'])
     return build('gmail', 'v1', credentials=credentials)
 
@@ -92,6 +98,7 @@ def send_email():
         send_message(service, 'me', message)
 
         return jsonify({'message': 'Email sent successfully'}), 200
+    
     except Exception as e:
         return jsonify({'error': f'Failed to send email. Error: {str(e)}'}), 500
 
