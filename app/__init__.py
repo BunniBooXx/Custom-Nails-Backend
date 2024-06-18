@@ -26,7 +26,7 @@ db.init_app(app)
 
 # Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), os.environ.get('CLIENT_SECRETS_FILE'))
+CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRETS_FILE', '/app/config/client_secrets.json')
 
 import os
 
