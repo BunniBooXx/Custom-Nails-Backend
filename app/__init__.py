@@ -24,6 +24,8 @@ CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')  # Ensure a secret key is set for session management
+
 db.init_app(app)
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -49,7 +51,10 @@ def authorize():
 
 @app.route('/oauth2/callback')
 def oauth2_callback():
-    state = session['state']
+    state = session.get('state')
+    if not state:
+        return jsonify({'error': 'State not found in session'}), 400
+
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
@@ -133,6 +138,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 

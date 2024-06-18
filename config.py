@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 class Config:
@@ -17,19 +16,16 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
 
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
-    TOKEN_URI= os.environ.get('TOKEN_URI')
+    TOKEN_URI = os.environ.get('TOKEN_URI')
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-    CLIENT_SECRETS_FILE=os.environ.get('CLIENT_SECRETS_FILE')
-    CLIENT_EMAIL= os.environ.get('CLIENT_EMAIL')
-    APP_SETTINGS= os.environ.get('APP_SETTINGS')
-
-
-
+    CLIENT_SECRETS_FILE = os.environ.get('CLIENT_SECRETS_FILE')
+    CLIENT_EMAIL = os.environ.get('CLIENT_EMAIL')
+    APP_SETTINGS = os.environ.get('APP_SETTINGS')
 
     SERVICE_ACCOUNT_FILE = os.environ.get('SERVICE_ACCOUNT_FILE')
-  
 
-    # JWT
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+    # Add a secret key for Flask session management
+    FLASK_SECRET_KEY = os.environ.get('FLASK_SECRET_KEY')
+
