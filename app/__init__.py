@@ -10,10 +10,10 @@ from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from app.models import User, Order, db
 import base64
-import os
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 app.config.from_object(os.getenv('APP_SETTINGS'))  # Ensure APP_SETTINGS points to your config file
+
 mail = Mail(app)
 jwt = JWTManager(app)
 
@@ -27,8 +27,6 @@ db.init_app(app)
 # Gmail API setup
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
-
-import os
 
 print(f"CLIENT_SECRETS_FILE: {CLIENT_SECRETS_FILE}")
 
@@ -144,6 +142,7 @@ if __name__ == '__main__':
         port = int(os.getenv('PORT', 10000))  # Using the correct port for Render
 
     app.run(host=host, port=port, debug=True)
+
 
 
 
