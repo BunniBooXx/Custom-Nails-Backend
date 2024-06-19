@@ -35,6 +35,10 @@ app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'flask-session:'
 app.config['SESSION_FILE_DIR'] = '/tmp/flask-session/'  # Ensure this directory exists and is writable
 
+# Create session directory if it does not exist
+if not os.path.exists(app.config['SESSION_FILE_DIR']):
+    os.makedirs(app.config['SESSION_FILE_DIR'])
+
 Session(app)
 
 db.init_app(app)
@@ -58,6 +62,7 @@ def authorize():
         include_granted_scopes='true'
     )
     session['state'] = state
+    print(f"State set in session: {state}")  # Debug statement
     return redirect(authorization_url)
 
 @app.route('/oauth2/callback')
@@ -65,6 +70,8 @@ def oauth2_callback():
     state = session.get('state')
     if not state:
         return jsonify({'error': 'State not found in session'}), 400
+
+    print(f"State retrieved from session: {state}")  # Debug statement
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
@@ -151,6 +158,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
