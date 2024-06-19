@@ -38,6 +38,9 @@ app.config['SESSION_FILE_DIR'] = '/tmp/flask-session/'  # Ensure this directory 
 # Create session directory if it does not exist
 if not os.path.exists(app.config['SESSION_FILE_DIR']):
     os.makedirs(app.config['SESSION_FILE_DIR'])
+    print(f"Created session directory: {app.config['SESSION_FILE_DIR']}")
+else:
+    print(f"Session directory exists: {app.config['SESSION_FILE_DIR']}")
 
 Session(app)
 
@@ -158,6 +161,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
