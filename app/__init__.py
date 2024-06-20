@@ -47,7 +47,8 @@ Session(app)
 db.init_app(app)
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
+##CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
+CLIENT_SECRETS_FILE = os.environ.get('CLIENT_SECRETS_FILE')
 print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 
 if not os.path.exists(CLIENT_SECRETS_FILE):
@@ -98,14 +99,17 @@ def credentials_to_dict(credentials):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-
 def get_gmail_service():
-    if 'credentials' not in session:
-        print("No credentials found in session")  # Debug statement
-        raise ValueError("No credentials in session")
-    
-    credentials = Credentials(**session['credentials'])
-    return build('gmail', 'v1', credentials=credentials)
+    try:
+        if 'credentials' not in session:
+            raise ValueError("No credentials found in session")
+
+        credentials = Credentials(**session['credentials'])
+        return build('gmail', 'v1', credentials=credentials)
+    except ValueError as e:
+        print(str(e))  # Log the error message
+        return None
+
 
 @app.route('/send-email', methods=['POST'])
 @jwt_required()
@@ -119,6 +123,9 @@ def send_email():
 
     if not data or not all(key in data for key in ['recipient', 'subject', 'body']):
         return jsonify({'error': 'Missing recipient, subject, or body in request body'}), 400
+    
+    if not current_user_id == os.environ.get('AUTHORIZED_USER_ID'):
+        return jsonify({'error': 'Unauthorized'}), 403
 
     recipient = data['recipient']
     subject = data['subject']
