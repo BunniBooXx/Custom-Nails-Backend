@@ -47,8 +47,7 @@ Session(app)
 db.init_app(app)
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-##CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
-CLIENT_SECRETS_FILE = os.environ.get('CLIENT_SECRETS_FILE')
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
 print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 
 if not os.path.exists(CLIENT_SECRETS_FILE):

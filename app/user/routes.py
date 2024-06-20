@@ -9,7 +9,7 @@ user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
 
 @user_blueprint.route("/<int:user_id>", methods=["GET"])
-@cross_origin(origins=["http://localhost:3000"])
+@cross_origin(origins=["http://localhost:3000", 'https://custom-nails-backend.onrender.com'])
 @jwt_required()
 def get_user(user_id):
     user = User.query.get(user_id)
