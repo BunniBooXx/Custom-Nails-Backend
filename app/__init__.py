@@ -28,6 +28,16 @@ print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # Ensure a secret key is set for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
 
+from app.order.routes import order_blueprint
+from app.user.routes import user_blueprint
+from app.product.routes import product_blueprint
+from app.cart.routes import cart_blueprint 
+
+app.register_blueprint(user_blueprint, url_prefix='/user')
+app.register_blueprint(product_blueprint, url_prefix='/product')
+app.register_blueprint(order_blueprint, url_prefix='/order')
+app.register_blueprint(cart_blueprint, url_prefix='/cart')
+
 # Flask-Session setup
 app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem for simplicity, change to Redis or other for production
 app.config['SESSION_PERMANENT'] = False
