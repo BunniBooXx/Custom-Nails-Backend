@@ -1,45 +1,17 @@
-from flask import request, jsonify
+from flask import request, jsonify, Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from app.models import db, User, TokenBlocklist, datetime
-from datetime import timezone
-from flask import Blueprint
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import cross_origin
+from app.models import db, User, TokenBlocklist
+from datetime import datetime, timezone
 
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
-
-@user_blueprint.route("/<int:user_id>", methods=["GET"])
-@cross_origin(origins=["http://localhost:3000", 'https://custom-nails-backend.onrender.com'])
-@jwt_required()
-def get_user(user_id):
-    user = User.query.get(user_id)
-    if user:
-        return jsonify({
-            "userId": user.user_id,
-            "username": user.username,
-            "email": user.email,
-            "avatar_image": user.avatar_image
-        }), 200
-    else:
-        return jsonify({"message": "User not found"}), 404
-    
-    
-@user_blueprint.route("", methods=["GET"])
-@cross_origin()
-@jwt_required()
-def get_user_identity():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if user:
-        return jsonify({
-            "userId": user.user_id,
-            "username": user.username,
-            "email": user.email,
-            "avatar_image": user.avatar_image
-        }), 200
-    else:
-        return jsonify({"message": "User not found"}), 404
-
+def authenticate_user(username, password):
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        return user
+    return None
 
 @user_blueprint.route('/signup', methods=['POST'])
 @cross_origin()
@@ -52,15 +24,15 @@ def signup():
     if not (username and password and email):
         return jsonify({"message": "Missing required fields"}), 400
 
-    if User.query.filter_by(username=username).first() is not None:
+    if User.query.filter_by(username=username).first():
         return jsonify({"message": "Username already exists"}), 409
 
-    user = User(username=username, password=password, email=email)
+    hashed_password = generate_password_hash(password)
+    user = User(username=username, password=hashed_password, email=email)
     db.session.add(user)
     db.session.commit()
 
     return jsonify({"message": "User created successfully"}), 201
-
 
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
@@ -72,27 +44,59 @@ def login():
     if not (username and password):
         return jsonify({"message": "Username and password are required"}), 400
 
-    user = User.query.filter_by(username=username).first()
-
-    if not user or not user.compare_password(password):
+    user = authenticate_user(username, password)
+    if not user:
         return jsonify({"message": "Invalid credentials"}), 401
 
-    # Generate access token with user instance as identity
-    access_token = create_access_token(identity=user)
-
-    # Return token in headers with Bearer prefix
+    access_token = create_access_token(identity=user.id)
     response = jsonify(message="Login successful")
     response.headers['Authorization'] = f'Bearer {access_token}'
-    response.headers['Access-Control-Expose-Headers'] = '*'
+    response.headers['Access-Control-Expose-Headers'] = 'Authorization'
     
     return response, 200
 
+@user_blueprint.route('/<int:user_id>', methods=['GET'])
+@cross_origin()
+@jwt_required()
+def get_user(user_id):
+    user = User.query.get(user_id)
+    if user:
+        return jsonify({
+            "userId": user.id,
+            "username": user.username,
+            "email": user.email,
+            "avatar_image": user.avatar_image
+        }), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
 
-from werkzeug.security import generate_password_hash
+@user_blueprint.route('', methods=['GET'])
+@cross_origin()
+@jwt_required()
+def get_user_identity():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if user:
+        return jsonify({
+            "userId": user.id,
+            "username": user.username,
+            "email": user.email,
+            "avatar_image": user.avatar_image
+        }), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
+
+@user_blueprint.route('/protected', methods=['GET'])
+@cross_origin()
+@jwt_required()
+def protected():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    return jsonify(logged_in_as=user.username), 200
 
 @user_blueprint.route('/update/<int:user_id>/username', methods=['PUT'])
 @cross_origin()
-@jwt_required()  
+@jwt_required()
 def update_username(user_id):
     current_user_id = get_jwt_identity()
 
@@ -112,11 +116,11 @@ def update_username(user_id):
     user.username = username
     db.session.commit()
 
-    return jsonify({"message": "Username updated", "data": user.to_response()}), 200
+    return jsonify({"message": "Username updated", "data": user.to_dict()}), 200
 
 @user_blueprint.route('/update/<int:user_id>/password', methods=['PUT'])
 @cross_origin()
-@jwt_required()  
+@jwt_required()
 def update_password(user_id):
     current_user_id = get_jwt_identity()
 
@@ -133,18 +137,15 @@ def update_password(user_id):
     if not password:
         return jsonify({"message": "Password is required"}), 400
 
-    # Hash the new password before updating
     hashed_password = generate_password_hash(password)
-
     user.password = hashed_password
     db.session.commit()
 
     return jsonify({"message": "Password updated"}), 200
 
-
 @user_blueprint.route('/update/<int:user_id>/email', methods=['PUT'])
 @cross_origin()
-@jwt_required()  
+@jwt_required()
 def update_email(user_id):
     current_user_id = get_jwt_identity()
 
@@ -166,10 +167,9 @@ def update_email(user_id):
 
     return jsonify({"message": "Email updated"}), 200
 
-
 @user_blueprint.route('/update/<int:user_id>/avatar', methods=['PUT'])
 @cross_origin()
-@jwt_required()  
+@jwt_required()
 def update_avatar(user_id):
     current_user_id = get_jwt_identity()
 
@@ -191,24 +191,22 @@ def update_avatar(user_id):
 
     return jsonify({"message": "Avatar image updated"}), 200
 
-
 @user_blueprint.route('/get/<int:user_id>/avatar', methods=["GET"])
-@cross_origin(origins=["http://localhost:3000"])
+@cross_origin()
 @jwt_required()
 def get_avatar_image(user_id):
     user = User.query.get(user_id)
-    if user: 
+    if user:
         avatar_image = user.avatar_image or "default-avatar-image.jpg"
-        return jsonify ({
+        return jsonify({
             "avatar_image": avatar_image
-        }) , 200
-    else: 
-        return jsonify ({ "message" : "User not found"}), 404
+        }), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
 
-    
 @user_blueprint.route('/update/<int:user_id>/all', methods=['PUT'])
 @cross_origin()
-@jwt_required()  
+@jwt_required()
 def update_user_info(user_id):
     current_user_id = get_jwt_identity()
 
@@ -228,7 +226,6 @@ def update_user_info(user_id):
     if username:
         user.username = username
     if password:
-        # Hash the new password before updating
         hashed_password = generate_password_hash(password)
         user.password = hashed_password
     if email:
@@ -238,22 +235,20 @@ def update_user_info(user_id):
 
     db.session.commit()
 
-    return jsonify({"message": "User information updated", "data": user.to_response()}), 200
+    return jsonify({"message": "User information updated", "data": user.to_dict()}), 200
 
-
-@user_blueprint.route("/logout", methods=["DELETE"])
+@user_blueprint.route('/logout', methods=["DELETE"])
 @cross_origin()
 @jwt_required(verify_type=False)
 def modify_token():
     token = get_jwt()
     jti = token["jti"]
     ttype = token["type"]
-    now = datetime.now(timezone.utc)
     
-    # Check if the user is logged in
     current_user_id = get_jwt_identity()
     user_id = current_user_id if current_user_id else None
     
-    db.session.add(TokenBlocklist(jti=jti, type=ttype, user_id=user_id, created_at=now))
+    db.session.add(TokenBlocklist(jti=jti, type=ttype, user_id=user_id))
     db.session.commit()
     return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+
