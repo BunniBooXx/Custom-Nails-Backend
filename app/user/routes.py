@@ -3,6 +3,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import cross_origin
 from app.models import db, User, TokenBlocklist
+from app import app
 from datetime import datetime, timezone
 
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
@@ -34,25 +35,39 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
+
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
 def login():
+    app.logger.info("Login route called")
+    
     data = request.json
+    if data is None:
+        app.logger.error("No data received")
+        return jsonify({"message": "Invalid request"}), 400
+    
     username = data.get('username')
     password = data.get('password')
-
+    
+    app.logger.info(f"Username: {username}")
+    
     if not (username and password):
+        app.logger.error("Username and/or password not provided")
         return jsonify({"message": "Username and password are required"}), 400
 
     user = authenticate_user(username, password)
     if not user:
+        app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=user.user_id)
+    app.logger.info(f"Access token created for user id: {user.user_id}")
+    
     response = jsonify(message="Login successful")
     response.headers['Authorization'] = f'Bearer {access_token}'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
     
+    app.logger.info("Login successful")
     return response, 200
 
 @user_blueprint.route('/<int:user_id>', methods=['GET'])

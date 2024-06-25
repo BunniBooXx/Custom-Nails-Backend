@@ -7,6 +7,8 @@ from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+import logging
+from logging.handlers import RotatingFileHandler
 from email.mime.text import MIMEText
 from flask_session import Session
 from app.models import User, Order, db
@@ -24,6 +26,15 @@ CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
+
+# Set up logging
+if not app.debug:
+    handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
+    handler.setLevel(logging.INFO)
+    app.logger.addHandler(handler)
+else:
+    logging.basicConfig(level=logging.DEBUG)
 
 # Ensure a secret key is set for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
@@ -55,6 +66,7 @@ else:
 Session(app)
 
 db.init_app(app)
+
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
@@ -169,6 +181,7 @@ def send_message(service, user_id, message):
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 print(f"JWT Secret Key: {app.config['JWT_SECRET_KEY']}")
+
 
 @app.route('/')
 def index():
