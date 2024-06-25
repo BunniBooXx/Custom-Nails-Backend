@@ -131,11 +131,13 @@ def get_gmail_service():
         print(str(e))  # Log the error message
         return None
 
+import os
 
 @app.route('/send-email', methods=['POST'])
 @jwt_required()
 def send_email():
     current_user_id = get_jwt_identity()
+    app.logger.info(f"Current User ID: {current_user_id}")
 
     if not request.is_json:
         return jsonify({'error': 'Unsupported Media Type. Expected application/json.'}), 415
@@ -144,9 +146,6 @@ def send_email():
 
     if not data or not all(key in data for key in ['recipient', 'subject', 'body']):
         return jsonify({'error': 'Missing recipient, subject, or body in request body'}), 400
-    
-    if not current_user_id == os.environ.get('AUTHORIZED_USER_ID'):
-        return jsonify({'error': 'Unauthorized'}), 403
 
     recipient = data['recipient']
     subject = data['subject']
@@ -154,13 +153,15 @@ def send_email():
 
     try:
         service = get_gmail_service()
+        if not service:
+            raise Exception("Gmail service not initialized")
 
         message = create_message(recipient, subject, body)
         send_message(service, 'me', message)
 
         return jsonify({'message': 'Email sent successfully'}), 200
-    
     except Exception as e:
+        app.logger.error(f"Failed to send email. Error: {str(e)}")
         return jsonify({'error': f'Failed to send email. Error: {str(e)}'}), 500
 
 def create_message(recipient, subject, body):
@@ -181,6 +182,13 @@ def send_message(service, user_id, message):
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 print(f"JWT Secret Key: {app.config['JWT_SECRET_KEY']}")
+
+@app.route('/debug-token', methods=['GET'])
+@jwt_required()
+def debug_token():
+    current_user_id = get_jwt_identity()
+    return jsonify({"current_user_id": current_user_id}), 200
+
 
 
 @app.route('/')

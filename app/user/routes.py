@@ -35,7 +35,6 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
-
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
 def login():
@@ -69,6 +68,7 @@ def login():
     
     app.logger.info("Login successful")
     return response, 200
+
 
 @user_blueprint.route('/<int:user_id>', methods=['GET'])
 @cross_origin()
