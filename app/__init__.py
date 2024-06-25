@@ -96,7 +96,7 @@ def oauth2_callback():
     if not state:
         return jsonify({'error': 'State not found in session'}), 400
 
-    print(f"State retrieved from session: {state}")  # Debug statement
+    print(f"State retrieved from session: {state}")
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
@@ -108,8 +108,9 @@ def oauth2_callback():
     credentials = flow.credentials
 
     session['credentials'] = credentials_to_dict(credentials)
-    print("Credentials stored in session:", session['credentials'])  # Debug statement
+    print("Credentials stored in session:", session['credentials'])
     return redirect(url_for('send_email'))
+
 
 def credentials_to_dict(credentials):
     return {
@@ -120,16 +121,23 @@ def credentials_to_dict(credentials):
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
+
 def get_gmail_service():
     try:
         if 'credentials' not in session:
             raise ValueError("No credentials found in session")
-
-        credentials = Credentials(**session['credentials'])
+        credentials_dict = session['credentials']
+        app.logger.debug(f"Credentials found in session: {credentials_dict}")
+        
+        credentials = Credentials(**credentials_dict)
         return build('gmail', 'v1', credentials=credentials)
     except ValueError as e:
-        print(str(e))  # Log the error message
+        app.logger.error(f"ValueError: {str(e)}")
         return None
+    except Exception as e:
+        app.logger.error(f"Exception in get_gmail_service: {str(e)}")
+        return None
+
 
 import os
 
