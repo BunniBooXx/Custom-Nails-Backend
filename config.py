@@ -16,7 +16,16 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
 
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
+
+
     TOKEN_URI = os.environ.get('TOKEN_URI')
+    MAIL_SERVER= 'smtp.gmail.com'
+    MAIL_PORT=587
+    MAIL_USE_TLS=True
+    MAIL_USE_SSL=False
+    MAIL_USERNAME = 'bunnybubblenails@gmail.com'
+    MAIL_PASSWORD= 'tuff cgft rbad cfmx'
+    MAIL_DEFAULT_SENDER='bunnybubblenails@gmail.com'
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')

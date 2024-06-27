@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "nail-shop-426612",
+  "private_key_id": "3f3607d0c29602117fcbae0841d02284aae32767",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCk7IehrU0RdScj\nMu2F5m1J3F65IE1l8NqycS8nq4/Dv7sDXcJVyAjhkGvucHs+xVtVmdIK9kNXWBHc\nTW3Iab6l4lqKj1/QOF7elyANTPqQojFPb1a2CKh6XMhSsqQut67nA8JQmGVBXD6H\n4cTCv/l29OzZWpa23npMnPnc4q6PVgb6hPo09NQwqBcq8P3xxAjGKzOQ/Jhmcg0J\nNnQTYKV8QsJ6yk6EWRDd+OHNGkZj6/ntNJFVaBBviyRfRlHIP5ZhtvGqAeE8N4du\nPJb3/xZeyvSmB3t2+2yKGVIvOtEnIIYFMJxDyU9ZLAxMBMYMp+bXwMVUUIwjDdzU\nXVC4dPV3AgMBAAECggEAA1Zpyux6gIY1No2LBhDxclFW9al2WreBwCuCeS/69cI6\nnKKxxZHWn19MK5li3ra6q+qJYtaa2bz9D4rMy7BKR4nr8Db4b2mhbZiNV8RdTkcz\nmQ/Mr/XY5R/3Bdq+1oGXxf7q8gqYz9iaLgT805OWMPSf734dsI+Sb6CcBdy5lPS0\nRv3Z15egVTxbTPJ+ylNpza/63AKQmZHpT5sOqhEz4/nDkL4Z1nygIN8b3IsFYHaS\nDa4VR01hNGjcE9o9kdQiXByC5cnbpXsDBoKg0PBTTozOpQ6s1NPbpt4MbwprKYcG\nf68MFTABkqy6OlMIoKIOJWDg+PJfPhMEMJwxDNUo8QKBgQDQeh7q49RiV8vU0JzW\nhZXvqRVu0kAtiBuxbGtlUUe/cL9E2A1kSSpnxA+DN8vJO/f/V1/lF4a1ynDfhqui\n/N6hdqyUPguMVM8ja3iSl1SmolncVnqA44fbCO7TZhdv8n0X8HcM33MTCrdSC/XC\nDKfTbw3VAcr+m1d+anj0lq2RrQKBgQDKhNOJNYLgCdUUAdxTEUP5jeDGUSICjv8L\nW0zYfqRfUa+xCVYQLo8oAGZOkK8RPW1oC5mTwaBmhjtzuqMbcLB4t+N2bl1B9gB/\ngyd9WFakjvGL3htzh7YU5z4wmBmp5UhYBEOT+qv4nfL/C+eipuxq0PCCfMDC8zBp\nS4bSeeKwMwKBgFIQoHcKNCJ6OQyPCg4QC9OJlZxIO2cw+uW+rg/2DO45LbGl8q+V\ndZHfRdP7dMbESn1DIcaGmkqZZBE5a/r+24xnsMuyGM2m3NsuhQn/dB0cL49io1p1\nNpdsTsb8myFALSntSI/SrfPC9iLf/l/ip3W9c45z5DqRX8Gtm+t8HNsJAoGBAKls\nY7fXD400TJE3WUYZHJ/q5M+kUmqHjLDIicpYcFTZ9ryJzfktqk/RvcUeX4dxt1Si\n17F3/COpSpVv30J2jPwBAwcyH0yubA5A/8lqHNoAR+02PArzzw0/w5RNurKagWI4\n9vwWasZMBVz/baJyOTjHYV4Y1f6CCs8cA0eT9mRnAoGAB2sB1l1sdDj/QsG5ec9i\ng0dnt7arWTOFmj3y6ApLGtScCKEyu7+3NyyEBB/govg7a1UXS+B8T1EtNblpHSDG\nOFNQhelexSxDi64BgymnSl6hOSjA8J1ucJ/4ENzng/GTifc4R24Grkn5EWTkVnpA\n/qhdkzIEpMCLGLewqo8a7S4=\n-----END PRIVATE KEY-----\n",
+  "client_email": "bunny-bubbles@nail-shop-426612.iam.gserviceaccount.com",
+  "client_id": "112606258403089242885",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bunny-bubbles%40nail-shop-426612.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

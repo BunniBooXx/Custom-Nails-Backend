@@ -124,12 +124,14 @@ def credentials_to_dict(credentials):
 
 def get_gmail_service():
     try:
-        if 'credentials' not in session:
-            raise ValueError("No credentials found in session")
-        credentials_dict = session['credentials']
-        app.logger.debug(f"Credentials found in session: {credentials_dict}")
+        ##if 'credentials' not in session:
+          ##  raise ValueError("No credentials found in session")
+       ## credentials_dict = session['credentials']
+        ##app.logger.debug(f"Credentials found in session: {credentials_dict}")
         
-        credentials = Credentials(**credentials_dict)
+       ## credentials = Credentials(**credentials_dict)
+        from google.oauth2 import service_account
+        credentials = service_account.Credentials.from_service_account_file('app/config/nail-shop.json')
         return build('gmail', 'v1', credentials=credentials)
     except ValueError as e:
         app.logger.error(f"ValueError: {str(e)}")
@@ -171,17 +173,35 @@ def send_email():
     except Exception as e:
         app.logger.error(f"Failed to send email. Error: {str(e)}")
         return jsonify({'error': f'Failed to send email. Error: {str(e)}'}), 500
+    
+@app.route('/send-emails', methods=['GET'])
+@jwt_required()
+def send_emails(): 
+    current_user_id = get_jwt_identity()
+    msg = Message(
+    'Hello',
+    recipients=['Jaquelinesmith100@gmail.com'],
+    body='This is a test email sent from Flask-Mail!'
+  )
+    mail.send(msg)
+    return jsonify({'message': 'Email sent successfully'}), 200
 
+
+
+from email.message import EmailMessage
 def create_message(recipient, subject, body):
-    message = MIMEText(body, 'html')
-    message['to'] = recipient
-    message['subject'] = subject
+    #message = MIMEText(body, 'html')#
+    message = EmailMessage()
+    message.set_content(body)
+    message['To'] = recipient
+    message['Subject'] = subject
+    message['From'] = 'bunnybubblenails@gmail.com'
     raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
     return raw_message
 
 def send_message(service, user_id, message):
     try:
-        message = service.users().messages().send(userId=user_id, body=message).execute()
+        message = service.users().messages().send(userId='me', body=message).execute()
         print('Message Id: %s' % message['id'])
         return message
     except Exception as error:

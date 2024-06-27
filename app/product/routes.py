@@ -26,7 +26,7 @@ def save_image(image):
     image.save(image_path)
     
     # Return the image URL
-    return f'http://localhost:5000/nails/{image_filename}'  # Return the full URL of the image
+    return f'http://custom-nails-backend.onrender.com/nails/{image_filename}'  # Return the full URL of the image
 
 @product_blueprint.route('/create', methods=['POST'])
 def create_product():
@@ -136,8 +136,8 @@ def create_checkout_session():
             payment_method_types=['card'],
             line_items=line_items,
             mode='payment',
-            success_url='http://localhost:3000/success',  # Replace with your frontend success URL
-            cancel_url='http://localhost:3000/cancel',  # Replace with your frontend cancel URL
+            success_url='http://custom-nails-backend.onrender.com/ordersuccesspage',  # Replace with your frontend success URL
+            cancel_url='http://custom-nails-backend.onrender.com/cancel',  # Replace with your frontend cancel URL
         )
 
         return jsonify({'clientSecret': session.client_secret})
