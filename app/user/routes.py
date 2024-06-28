@@ -2,9 +2,10 @@ from flask import request, jsonify, Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import cross_origin
+from datetime import timedelta
 from app.models import db, User, TokenBlocklist
 from app import app
-from datetime import datetime, timezone
+
 
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
@@ -34,6 +35,7 @@ def signup():
     db.session.commit()
 
     return jsonify({"message": "User created successfully"}), 201
+ 
 
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
@@ -59,7 +61,9 @@ def login():
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
-    access_token = create_access_token(identity=user.user_id)
+    # Create an access token with an expiration of 3 days
+    expires = timedelta(days=3)
+    access_token = create_access_token(identity=user.user_id, expires_delta=expires)
     app.logger.info(f"Access token created for user id: {user.user_id}")
     
     response = jsonify(message="Login successful")

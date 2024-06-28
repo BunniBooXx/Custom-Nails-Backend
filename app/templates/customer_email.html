@@ -58,7 +58,7 @@
         <li>
             <h4>{{ item.product.name }}</h4>
             <p>Quantity: {{ item.quantity }}</p>
-            <p>Nail Size Option: {{ item.nail_size_option_id.name }}</p>
+            <p>Nail Size Option: {{ item.nail_size_option.name }}</p>
             <p>Left Hand Custom Size: {{ item.left_hand_custom_size or 'N/A' }}</p>
             <p>Right Hand Custom Size: {{ item.right_hand_custom_size or 'N/A' }}</p>
             <p>Unit Price: ${{ '{:.2f}'.format(item.unit_price) }}</p>

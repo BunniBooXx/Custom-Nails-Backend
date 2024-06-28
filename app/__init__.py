@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, redirect, url_for, session
+from flask import Flask, request, jsonify, redirect, url_for, session, render_template
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
@@ -11,7 +11,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from email.mime.text import MIMEText
 from flask_session import Session
-from app.models import User, Order, db
+from app.models import User, Order, db, OrderItem
 import base64
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
@@ -21,6 +21,10 @@ print(f"Using configuration: {os.getenv('APP_SETTINGS')}")
 
 mail = Mail(app)
 jwt = JWTManager(app)
+from flask_migrate import Migrate
+
+
+migrate = Migrate(app, db)
 
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
@@ -174,17 +178,90 @@ def send_email():
         app.logger.error(f"Failed to send email. Error: {str(e)}")
         return jsonify({'error': f'Failed to send email. Error: {str(e)}'}), 500
     
-@app.route('/send-emails', methods=['GET'])
+##@app.route('/send-emails', methods=['GET'])
+##@jwt_required()
+##def send_emails(): 
+    ##current_user_id = get_jwt_identity()
+    ##msg = Message(
+   ## 'Hello',
+   ## recipients=['Jaquelinesmith100@gmail.com'],
+ ##   body='This is a test email sent from Flask-Mail!'
+##  )
+  ##  mail.send(msg)
+   ## return jsonify({'message': 'Email sent successfully'}), 200##
+
+
+@app.route('/send-emails', methods=['POST'])
 @jwt_required()
-def send_emails(): 
-    current_user_id = get_jwt_identity()
-    msg = Message(
-    'Hello',
-    recipients=['Jaquelinesmith100@gmail.com'],
-    body='This is a test email sent from Flask-Mail!'
-  )
-    mail.send(msg)
-    return jsonify({'message': 'Email sent successfully'}), 200
+def send_emails():
+    current_user = get_current_user()
+    
+    if not current_user:
+        return jsonify({'message': 'User not found'}), 404
+
+    if not request.is_json:
+        return jsonify({'message': 'Request payload must be in JSON format'}), 400
+
+    data = request.get_json()
+    user_id = data.get('user_id')
+    order_id = data.get('order_id')
+
+    # Fetch user details
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    
+    # Fetch order details
+    order = Order.query.get(order_id)
+    if not order or order.user_id != user_id:
+        return jsonify({'message': 'Order not found or does not belong to the user'}), 404
+
+    # Fetch order items
+    order_items = OrderItem.query.filter_by(order_id=order_id).all()
+
+    # Developer email from environment variables
+    developer_email = os.environ.get('DEVELOPER_EMAIL')
+    if not developer_email:
+        return jsonify({'message': 'Developer email not configured'}), 500
+
+    # Render the email templates
+    user_email_body = render_template(
+        'customer_email.html',
+        customer_name=user.email,
+        order=order,
+        order_items=order_items,
+        total_amount=order.total_amount
+    )
+    developer_email_body = render_template(
+        'developer_email.html',
+        customer_name=user.email,
+        order=order,
+        order_items=order_items,
+        total_amount=order.total_amount
+    )
+
+    # Send email to customer
+    customer_msg = Message(
+        'Order Confirmation',
+        recipients=[user.email],
+        html=user_email_body
+    )
+    mail.send(customer_msg)
+
+    # Send email to developer
+    developer_msg = Message(
+        'New Order Received',
+        recipients=[developer_email],
+        html=developer_email_body
+    )
+    mail.send(developer_msg)
+
+    return jsonify({'message': 'Emails sent successfully'}), 200
+
+def get_current_user():
+    user_id = get_jwt_identity()
+    return User.query.get(user_id)
+
 
 
 

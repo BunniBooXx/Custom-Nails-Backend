@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import func
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import get_jwt_identity
 
@@ -200,18 +200,19 @@ class OrderItem(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.product_id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
-    nail_size_option_id = db.Column(db.Integer, db.ForeignKey('nail_size_option.nail_size_option_id'), nullable=False)
+    nail_size_option_id= db.Column(db.Integer, db.ForeignKey('nail_size_option.nail_size_option_id'), nullable=False)
     left_hand_custom_size = db.Column(db.String(100))
     right_hand_custom_size = db.Column(db.String(100))
+    nail_size_option = db.relationship('NailSizeOption', backref='order_items')
     
     product = db.relationship('Product', backref='order_items', lazy=True)
 
-    def __init__(self, order_id, product_id, quantity, unit_price, nail_size_option_id, left_hand_custom_size=None, right_hand_custom_size=None):
+    def __init__(self, order_id, product_id, quantity, unit_price, nail_size_option, left_hand_custom_size=None, right_hand_custom_size=None):
         self.order_id = order_id
         self.product_id = product_id
         self.quantity = quantity
         self.unit_price = unit_price
-        self.nail_size_option_id = nail_size_option_id
+        self.nail_size_option = nail_size_option
         self.left_hand_custom_size = left_hand_custom_size
         self.right_hand_custom_size = right_hand_custom_size
 
@@ -223,9 +224,10 @@ class OrderItem(db.Model):
         db.session.delete(self)
         db.session.commit()
 
+   
     def to_response(self):
         product = Product.query.get(self.product_id)
-        nail_size_option = NailSizeOption.query.get(self.nail_size_option_id)
+        nail_size_option = NailSizeOption.query.get(self.nail_size_option_id)  # Retrieve the NailSizeOption object
         return {
             "order_item_id": self.order_item_id,
             "order_id": self.order_id,
@@ -233,7 +235,7 @@ class OrderItem(db.Model):
             "product_name": product.name,
             "quantity": self.quantity,
             "unit_price": self.unit_price,
-            "nail_size_option": nail_size_option.name,
+            "nail_size_option": nail_size_option.name,  # Access the name attribute
             "left_hand_custom_size": self.left_hand_custom_size,
             "right_hand_custom_size": self.right_hand_custom_size
         }
