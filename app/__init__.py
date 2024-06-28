@@ -15,6 +15,10 @@ from app.models import User, Order, db, OrderItem
 import base64
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
+
+# Additional configuration for hosted environment
+app.config['ENV'] = 'production'
+app.config['DEBUG'] = False
 app.config.from_object(os.getenv('APP_SETTINGS'))
 
 print(f"Using configuration: {os.getenv('APP_SETTINGS')}")

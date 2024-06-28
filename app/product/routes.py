@@ -26,7 +26,7 @@ def save_image(image):
     image.save(image_path)
     
     # Return the image URL
-    return f'http://custom-nails-backend.onrender.com/nails/{image_filename}'  # Return the full URL of the image
+    return f'https://custom-nails-backend.onrender.com/nails/{image_filename}'  # Return the full URL of the image
 
 @product_blueprint.route('/create', methods=['POST'])
 def create_product():
