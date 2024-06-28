@@ -21,6 +21,25 @@ app.config['ENV'] = 'production'
 app.config['DEBUG'] = False
 app.config.from_object(os.getenv('APP_SETTINGS'))
 
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Internal Server Error: {error}')
+    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
+
+@app.route('/user/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    try:
+        # Fetch the user from the database
+        user = User.query.get(user_id)
+        if user:
+            return jsonify(user.to_dict())  # Assuming your User model has a to_dict method
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        app.logger.error(f'Error fetching user: {e}')
+        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
+
 print(f"Using configuration: {os.getenv('APP_SETTINGS')}")
 
 mail = Mail(app)
