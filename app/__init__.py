@@ -33,7 +33,7 @@ def get_user(user_id):
         # Fetch the user from the database
         user = User.query.get(user_id)
         if user:
-            return jsonify(user.to_dict())  # Assuming your User model has a to_dict method
+            return jsonify(user.to_response())  # Assuming your User model has a to_dict method
         else:
             return jsonify({'error': 'User not found'}), 404
     except Exception as e:
