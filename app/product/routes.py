@@ -136,8 +136,8 @@ def create_checkout_session():
             payment_method_types=['card'],
             line_items=line_items,
             mode='payment',
-            success_url='http://custom-nails-backend.onrender.com/ordersuccesspage',  # Replace with your frontend success URL
-            cancel_url='http://custom-nails-backend.onrender.com/cancel',  # Replace with your frontend cancel URL
+            success_url='https://custom-nails-backend.onrender.com/ordersuccesspage',  # Replace with your frontend success URL
+            cancel_url='https://custom-nails-backend.onrender.com/cancel',  # Replace with your frontend cancel URL
         )
 
         return jsonify({'clientSecret': session.client_secret})

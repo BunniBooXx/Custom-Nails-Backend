@@ -30,7 +30,7 @@ from flask_migrate import Migrate
 
 migrate = Migrate(app, db)
 
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -151,36 +151,7 @@ def get_gmail_service():
 
 import os
 
-@app.route('/send-email', methods=['POST'])
-@jwt_required()
-def send_email():
-    current_user_id = get_jwt_identity()
-    app.logger.info(f"Current User ID: {current_user_id}")
 
-    if not request.is_json:
-        return jsonify({'error': 'Unsupported Media Type. Expected application/json.'}), 415
-
-    data = request.get_json()
-
-    if not data or not all(key in data for key in ['recipient', 'subject', 'body']):
-        return jsonify({'error': 'Missing recipient, subject, or body in request body'}), 400
-
-    recipient = data['recipient']
-    subject = data['subject']
-    body = data['body']
-
-    try:
-        service = get_gmail_service()
-        if not service:
-            raise Exception("Gmail service not initialized")
-
-        message = create_message(recipient, subject, body)
-        send_message(service, 'me', message)
-
-        return jsonify({'message': 'Email sent successfully'}), 200
-    except Exception as e:
-        app.logger.error(f"Failed to send email. Error: {str(e)}")
-        return jsonify({'error': f'Failed to send email. Error: {str(e)}'}), 500
     
 ##@app.route('/send-emails', methods=['GET'])
 ##@jwt_required()
@@ -270,15 +241,7 @@ def get_current_user():
 
 
 from email.message import EmailMessage
-def create_message(recipient, subject, body):
-    #message = MIMEText(body, 'html')#
-    message = EmailMessage()
-    message.set_content(body)
-    message['To'] = recipient
-    message['Subject'] = subject
-    message['From'] = 'bunnybubblenails@gmail.com'
-    raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
-    return raw_message
+
 
 def send_message(service, user_id, message):
     try:
