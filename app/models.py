@@ -1,8 +1,10 @@
 from datetime import datetime
 from sqlalchemy import func
 from flask_sqlalchemy import SQLAlchemy 
+from datetime import timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import get_jwt_identity
+import jwt
 
 
 db = SQLAlchemy()
@@ -50,6 +52,14 @@ class User(db.Model):
 
     def compare_password(self, password):
         return check_password_hash(self.password, password)
+    
+    def generate_jwt(self):
+        payload = {
+            'user_id': self.user_id,
+            'exp': datetime.now(timezone.utc) + timedelta(days=3)  # Token expires in 3 days
+        }
+        token = jwt.encode(payload, 'JWT_SECRET_KEY', algorithm='HS256')
+        return token
 
     def create(self):
         db.session.add(self)

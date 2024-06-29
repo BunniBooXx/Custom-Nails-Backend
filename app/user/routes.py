@@ -57,8 +57,8 @@ def login():
         app.logger.error("Username and/or password not provided")
         return jsonify({"message": "Username and password are required"}), 400
 
-    user = authenticate_user(username, password)
-    if not user:
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
@@ -73,6 +73,25 @@ def login():
     
     app.logger.info("Login successful")
     return response, 200
+
+
+
+
+@user_blueprint.route('/user', methods=['GET'])
+@jwt_required()
+def get_user_identity():
+    user_id = get_jwt_identity()
+    app.logger.info(f"Fetching user with ID: {user_id}")
+    user = User.query.get(user_id)
+    if user:
+        return jsonify({
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email
+        }), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
+
 
 
 @user_blueprint.route('/<int:user_id>', methods=['GET'])

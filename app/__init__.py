@@ -175,17 +175,6 @@ import os
 
 
     
-##@app.route('/send-emails', methods=['GET'])
-##@jwt_required()
-##def send_emails(): 
-    ##current_user_id = get_jwt_identity()
-    ##msg = Message(
-   ## 'Hello',
-   ## recipients=['Jaquelinesmith100@gmail.com'],
- ##   body='This is a test email sent from Flask-Mail!'
-##  )
-  ##  mail.send(msg)
-   ## return jsonify({'message': 'Email sent successfully'}), 200##
 
 
 @app.route('/send-emails', methods=['POST'])
