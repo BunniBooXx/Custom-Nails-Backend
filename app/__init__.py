@@ -1,18 +1,18 @@
 import os
 from flask import Flask, request, jsonify, redirect, url_for, session, render_template
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from models import User,Product, Order, OrderItem
+from flask_jwt_extended import jwt_required, get_jwt_identity 
 import logging
 from logging.handlers import RotatingFileHandler
-from email.mime.text import MIMEText
 from flask_session import Session
-from app.models import User, Order, db, OrderItem
-import base64
+from app.models import db
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 
@@ -20,7 +20,6 @@ app = Flask(__name__, template_folder='templates', static_url_path='/nails', sta
 app.config['ENV'] = 'production'
 app.config['DEBUG'] = False
 app.config.from_object(os.getenv('APP_SETTINGS'))
-
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,12 +42,9 @@ def get_user(user_id):
         app.logger.error(f'Error fetching user: {e}')
         return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
 
-
-
 mail = Mail(app)
 jwt = JWTManager(app)
 from flask_migrate import Migrate
-
 
 migrate = Migrate(app, db)
 
@@ -56,7 +52,6 @@ CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
-
 
 # Set up logging
 if not app.debug:
@@ -80,11 +75,11 @@ app.register_blueprint(order_blueprint, url_prefix='/order')
 app.register_blueprint(cart_blueprint, url_prefix='/cart')
 
 # Flask-Session setup
-app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem for simplicity, change to Redis or other for production
+app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'flask-session:'
-app.config['SESSION_FILE_DIR'] = '/tmp/flask-session/'  # Ensure this directory exists and is writable
+app.config['SESSION_FILE_DIR'] = '/tmp/flask-session/'
 
 # Create session directory if it does not exist
 if not os.path.exists(app.config['SESSION_FILE_DIR']):
@@ -96,7 +91,6 @@ else:
 Session(app)
 
 db.init_app(app)
-
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
@@ -117,7 +111,7 @@ def authorize():
         include_granted_scopes='true'
     )
     session['state'] = state
-    print(f"State set in session: {state}")  # Debug statement
+    print(f"State set in session: {state}")
     return redirect(authorization_url)
 
 @app.route('/oauth2/callback')
@@ -141,7 +135,6 @@ def oauth2_callback():
     print("Credentials stored in session:", session['credentials'])
     return redirect(url_for('send_email'))
 
-
 def credentials_to_dict(credentials):
     return {
         'token': credentials.token,
@@ -154,12 +147,6 @@ def credentials_to_dict(credentials):
 
 def get_gmail_service():
     try:
-        ##if 'credentials' not in session:
-          ##  raise ValueError("No credentials found in session")
-       ## credentials_dict = session['credentials']
-        ##app.logger.debug(f"Credentials found in session: {credentials_dict}")
-        
-       ## credentials = Credentials(**credentials_dict)
         from google.oauth2 import service_account
         credentials = service_account.Credentials.from_service_account_file('app/config/nail-shop.json')
         return build('gmail', 'v1', credentials=credentials)
@@ -169,13 +156,6 @@ def get_gmail_service():
     except Exception as e:
         app.logger.error(f"Exception in get_gmail_service: {str(e)}")
         return None
-
-
-import os
-
-
-    
-
 
 @app.route('/send-emails', methods=['POST'])
 @jwt_required()
@@ -248,11 +228,7 @@ def get_current_user():
     user_id = get_jwt_identity()
     return User.query.get(user_id)
 
-
-
-
 from email.message import EmailMessage
-
 
 def send_message(service, user_id, message):
     try:
@@ -272,8 +248,6 @@ def debug_token():
     current_user_id = get_jwt_identity()
     return jsonify({"current_user_id": current_user_id}), 200
 
-
-
 @app.route('/')
 def index():
     return 'Welcome to your Flask application!'
@@ -281,6 +255,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 

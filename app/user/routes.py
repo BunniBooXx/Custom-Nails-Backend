@@ -6,7 +6,6 @@ from datetime import timedelta
 from app.models import db, User, TokenBlocklist
 from app import app
 
-
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
 def authenticate_user(username, password):
@@ -35,8 +34,6 @@ def signup():
     db.session.commit()
 
     return jsonify({"message": "User created successfully"}), 201
- 
-
 
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin()
@@ -74,10 +71,8 @@ def login():
     app.logger.info("Login successful")
     return response, 200
 
-
-
-
-@user_blueprint.route('/user', methods=['GET'])
+@user_blueprint.route('', methods=['GET'])
+@cross_origin()
 @jwt_required()
 def get_user_identity():
     user_id = get_jwt_identity()
@@ -88,39 +83,6 @@ def get_user_identity():
             "user_id": user.user_id,
             "username": user.username,
             "email": user.email
-        }), 200
-    else:
-        return jsonify({"message": "User not found"}), 404
-
-
-
-@user_blueprint.route('/<int:user_id>', methods=['GET'])
-@cross_origin()
-@jwt_required()
-def get_user(user_id):
-    user = User.query.get(user_id)
-    if user:
-        return jsonify({
-            "userId": user.id,
-            "username": user.username,
-            "email": user.email,
-            "avatar_image": user.avatar_image
-        }), 200
-    else:
-        return jsonify({"message": "User not found"}), 404
-
-@user_blueprint.route('', methods=['GET'])
-@cross_origin()
-@jwt_required()
-def get_user_identity():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if user:
-        return jsonify({
-            "userId": user.id,
-            "username": user.username,
-            "email": user.email,
-            "avatar_image": user.avatar_image
         }), 200
     else:
         return jsonify({"message": "User not found"}), 404
@@ -155,7 +117,7 @@ def update_username(user_id):
     user.username = username
     db.session.commit()
 
-    return jsonify({"message": "Username updated", "data": user.to_dict()}), 200
+    return jsonify({"message": "Username updated", "data": user.to_response()}), 200
 
 @user_blueprint.route('/update/<int:user_id>/password', methods=['PUT'])
 @cross_origin()
@@ -274,7 +236,7 @@ def update_user_info(user_id):
 
     db.session.commit()
 
-    return jsonify({"message": "User information updated", "data": user.to_dict()}), 200
+    return jsonify({"message": "User information updated", "data": user.to_response()}), 200
 
 @user_blueprint.route('/logout', methods=["DELETE"])
 @cross_origin()
@@ -290,4 +252,3 @@ def modify_token():
     db.session.add(TokenBlocklist(jti=jti, type=ttype, user_id=user_id))
     db.session.commit()
     return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
-

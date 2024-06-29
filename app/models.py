@@ -14,8 +14,6 @@ def get_current_user():
     user = User.query.get(user_id)
     return user
 
-
-
 class TokenBlocklist(db.Model):
     __tablename__ = 'tokenblocklist'
     id = db.Column(db.Integer, primary_key=True)
@@ -36,19 +34,18 @@ class User(db.Model):
     __tablename__ = 'user'
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
-    email = db.Column (db.String(200), nullable=False, unique=True)
+    email = db.Column(db.String(200), nullable=False, unique=True)
     password = db.Column(db.String(300), nullable=False)
     avatar_image = db.Column(db.String(300))
     
     orders = db.relationship('Order', backref='user', lazy=True)
     carts = db.relationship('Cart', backref='user', lazy=True)
    
-
     def __init__(self, username, email, password, avatar_image=None):
         self.username = username
         self.email = email
         self.password = generate_password_hash(password)
-        self.avatar_image= avatar_image
+        self.avatar_image = avatar_image
 
     def compare_password(self, password):
         return check_password_hash(self.password, password)
