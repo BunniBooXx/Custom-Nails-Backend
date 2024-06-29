@@ -13,6 +13,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask_session import Session
 from app.models import db
+import stripe
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 
@@ -48,7 +49,8 @@ from flask_migrate import Migrate
 
 migrate = Migrate(app, db)
 
-CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+##CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+CORS(app, resources={r"/*": {"origins": "*"}}, methos=["OPTIONS", "GET", "POST", "PUT", "DELETE"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -98,6 +100,47 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
+
+
+@app.route('/create-checkout-session', methods=['POST'])
+@jwt_required()
+def create_checkout_session():
+    try:
+        data = request.get_json()
+        order_id = data['order_id']
+
+        # Fetch order details from your database
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+
+        # Create a new Stripe Checkout Session
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': 'Order {}'.format(order_id),
+                        },
+                        'unit_amount': int(order.total_amount * 100),  # Convert to cents
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+            success_url=f"https://nail-shop.onrender.com/ordersuccesspage/{order_id}",
+            cancel_url=f"https://nail-shop.onrender.com/cancel",
+            metadata={
+                'order_id': order_id
+            }
+        )
+
+        return jsonify({'url': session.url})
+    except Exception as e:
+        app.logger.error(f'Error creating checkout session: {e}')
+        return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
 
 @app.route('/authorize')
 def authorize():
