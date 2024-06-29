@@ -7,7 +7,7 @@ from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from models import User,Product, Order, OrderItem
+from app.models import User,Product, Order, OrderItem
 from flask_jwt_extended import jwt_required, get_jwt_identity 
 import logging
 from logging.handlers import RotatingFileHandler
