@@ -22,6 +22,9 @@ app.config['DEBUG'] = False
 app.config.from_object(os.getenv('APP_SETTINGS'))
 
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 @app.errorhandler(500)
 def internal_error(error):
     app.logger.error(f'Internal Server Error: {error}')
@@ -30,17 +33,17 @@ def internal_error(error):
 @app.route('/user/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     try:
-        # Fetch the user from the database
+        app.logger.info(f"Fetching user with ID: {user_id}")
         user = User.query.get(user_id)
         if user:
-            return jsonify(user.to_response())  # Assuming your User model has a to_dict method
+            return jsonify(user.to_response())
         else:
             return jsonify({'error': 'User not found'}), 404
     except Exception as e:
         app.logger.error(f'Error fetching user: {e}')
         return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
 
-print(f"Using configuration: {os.getenv('APP_SETTINGS')}")
+
 
 mail = Mail(app)
 jwt = JWTManager(app)
