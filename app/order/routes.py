@@ -2,6 +2,7 @@ from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, Order, OrderItem, User, Product, CartItem, Cart, NailSizeOption
 from flask import Blueprint
+from app import app
 
 order_blueprint = Blueprint("order", __name__, url_prefix="/order")
 
@@ -9,43 +10,36 @@ order_blueprint = Blueprint("order", __name__, url_prefix="/order")
 @jwt_required()
 def create_preliminary_order():
     data = request.json
-    user_id = get_jwt_identity()  # Retrieve user ID from JWT
+    user_id = get_jwt_identity()
     total_amount = data.get('total_amount')
 
-    # Create a preliminary order with user information
-    order = Order(user_id=user_id, total_amount=total_amount, status='Processing')
-    
-    db.session.add(order)
-    db.session.commit()
+    try:
+        order = Order(user_id=user_id, total_amount=total_amount, status='Processing')
+        db.session.add(order)
+        db.session.commit()
 
-    # Fetch the user's cart
-    cart = Cart.query.filter_by(user_id=user_id).first()
-    if not cart:
-        return jsonify({'success': False, 'error': 'Cart not found'}), 404
+        # Fetch the user's cart
+        cart = Cart.query.filter_by(user_id=user_id).first()
+        if not cart:
+            return jsonify({'success': False, 'error': 'Cart not found'}), 404
 
-    # Create order items from cart items
-    for item in cart.items:
-        order_item = OrderItem(
-            order_id=order.order_id,
-            product_id=item.product_id,
-            quantity=item.quantity,
-            unit_price=item.product.price,
-            nail_size_option_id=item.nail_size_option_id  # Ensure this is correct
-        )
-        db.session.add(order_item)
+        # Create order items from cart items
+        for item in cart.items:
+            order_item = OrderItem(
+                order_id=order.order_id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                unit_price=item.product.price,
+                nail_size_option_id=item.nail_size_option_id
+            )
+            db.session.add(order_item)
 
-    db.session.commit()
-    
-    # Return the response including the name of the nail size option
-    order_items = [order_item.to_response() for order_item in order.order_items]
-    response_data = {
-        'success': True,
-        'message': 'Preliminary order created successfully',
-        'order_id': order.order_id,
-        'order_items': order_items
-    }
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Preliminary order created successfully', 'order_id': order.order_id}), 201
+    except Exception as e:
+        app.logger.error(f'Error creating preliminary order: {e}')
+        return jsonify({'success': False, 'error': 'Failed to create preliminary order', 'message': str(e)}), 500
 
-    return jsonify(response_data), 201
 
 
 @order_blueprint.route('/update_order_with_user_info/<int:order_id>', methods=['PUT'])
@@ -101,6 +95,20 @@ def order_details(order_id):
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@order_blueprint.route('/<int:order_id>', methods=['GET'])
+@jwt_required()
+def get_order(order_id):
+    try:
+        order = Order.query.get(order_id)
+        if order:
+            return jsonify(order.to_response()), 200
+        else:
+            return jsonify({'message': 'Order not found'}), 404
+    except Exception as e:
+        app.logger.error(f'Error fetching order: {e}')
+        return jsonify({'error': 'Failed to fetch order', 'message': str(e)}), 500
+
 
 
 @order_blueprint.route('/read/<int:order_id>', methods=['GET'])
