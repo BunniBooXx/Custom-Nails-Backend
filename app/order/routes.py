@@ -30,13 +30,23 @@ def create_preliminary_order():
             product_id=item.product_id,
             quantity=item.quantity,
             unit_price=item.product.price,
-            nail_size_option_id=item.nail_size_option_id
+            nail_size_option_id=item.nail_size_option_id  # Ensure this is correct
         )
         db.session.add(order_item)
 
     db.session.commit()
     
-    return jsonify({'success': True, 'message': 'Preliminary order created successfully', 'order_id': order.order_id}), 201
+    # Return the response including the name of the nail size option
+    order_items = [order_item.to_response() for order_item in order.order_items]
+    response_data = {
+        'success': True,
+        'message': 'Preliminary order created successfully',
+        'order_id': order.order_id,
+        'order_items': order_items
+    }
+
+    return jsonify(response_data), 201
+
 
 @order_blueprint.route('/update_order_with_user_info/<int:order_id>', methods=['PUT'])
 @jwt_required()
