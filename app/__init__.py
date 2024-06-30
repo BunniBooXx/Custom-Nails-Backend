@@ -108,15 +108,12 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
+
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
     try:
-        stripe.api_key = app.config['STRIPE_SECRET_KEY']
-
-        # Parse the request body as JSON
         data = request.get_json()
-
         order_id = data.get('order_id')
         if not order_id:
             return jsonify({'error': 'Missing order_id in request body'}), 400
@@ -135,7 +132,7 @@ def create_checkout_session():
         # Create a new Stripe Checkout Session
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
-            line_items=[  # <-- The change is here
+            line_items=[
                 {
                     'price_data': {
                         'currency': 'usd',
@@ -146,7 +143,7 @@ def create_checkout_session():
                     },
                     'quantity': 1,
                 },
-            ],  # <-- And here
+            ],
             mode='payment',
             success_url=f"https://nail-shop.onrender.com/ordersuccesspage/{order_id}",
             cancel_url=f"https://nail-shop.onrender.com/cancel",
@@ -168,6 +165,7 @@ def create_checkout_session():
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
 
 
+
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
 
@@ -180,11 +178,12 @@ def set_csp_header(response):
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: *; "
         "connect-src 'self' https://custom-nails-backend.onrender.com "
-        "https://api.stripe.com https://m.stripe.com https://*.stripe.com "
+        "https://api.stripe.com https://errors.stripe.com https://r.stripe.com https://ppm.stripe.com "
         "https://merchant-ui-api.stripe.com; "
         "frame-src 'self' https://js.stripe.com *"
     )
     return response
+
 
 
 @app.route('/authorize')
