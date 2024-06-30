@@ -186,6 +186,7 @@ def set_csp_header(response):
 
 
 
+
 @app.route('/authorize')
 def authorize():
     flow = Flow.from_client_secrets_file(
