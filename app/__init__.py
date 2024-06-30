@@ -179,10 +179,13 @@ def set_csp_header(response):
         "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: *; "
-        "connect-src 'self' https://custom-nails-backend.onrender.com https://api.stripe.com https://m.stripe.com https://*.stripe.com; "
+        "connect-src 'self' https://custom-nails-backend.onrender.com "
+        "https://api.stripe.com https://m.stripe.com https://*.stripe.com "
+        "https://merchant-ui-api.stripe.com; "
         "frame-src 'self' https://js.stripe.com *"
     )
     return response
+
 
 @app.route('/authorize')
 def authorize():
