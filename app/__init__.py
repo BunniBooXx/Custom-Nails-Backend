@@ -173,15 +173,18 @@ print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 def set_csp_header(response):
     csp = (
         "default-src 'self'; "
-        "connect-src 'self' https://api.stripe.com https://errors.stripe.com https://r.stripe.com https://ppm.stripe.com https://merchant-ui-api.stripe.com https://custom-nails-backend.onrender.com; "
+        "connect-src 'self' https://api.stripe.com https://errors.stripe.com https://r.stripe.com https://ppm.stripe.com https://merchant-ui-api.stripe.com https://custom-nails-backend.onrender.com https://nail-shop.onrender.com; "
         "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://connect-js.stripe.com https://checkout.stripe.com; "
         "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://connect-js.stripe.com https://checkout.stripe.com; "
         "style-src 'self' 'unsafe-inline' sha256-0hAheEzaMe6uXIKV4EehS9pu1am1lj/KnnzrOYqckXk=; "
         "img-src 'self' data: https://*.stripe.com; "
+        "report-uri /csp-report;"
     )
     print("Setting CSP header:", csp)
     response.headers['Content-Security-Policy'] = csp
     return response
+
+
 
 
 
