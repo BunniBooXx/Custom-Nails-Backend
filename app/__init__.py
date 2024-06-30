@@ -26,6 +26,23 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+from flask_talisman import Talisman
+
+
+
+# Content Security Policy configuration using Talisman
+csp = {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
+    'connect-src': ["'self'", 'https://api.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
+    'frame-src': ['https://js.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
+    'img-src': ["'self'", 'data:', 'https://*.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com']
+}
+
+# Initialize Talisman with the CSP configuration
+Talisman(app, content_security_policy=csp)
+
 @app.errorhandler(500)
 def internal_error(error):
     app.logger.error(f'Internal Server Error: {error}')
