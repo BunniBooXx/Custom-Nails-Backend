@@ -72,6 +72,8 @@ def login():
     return response, 200
 
 
+
+
 @user_blueprint.route('', methods=['GET'])
 @cross_origin()
 @jwt_required()
