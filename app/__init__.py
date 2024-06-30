@@ -101,11 +101,12 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
-
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
     try:
+        stripe.api_key = app.config['STRIPE_SECRET_KEY']  # Add this line to set the API key
+        
         data = request.get_json()
         order_id = data['order_id']
 
@@ -141,6 +142,9 @@ def create_checkout_session():
     except Exception as e:
         app.logger.error(f'Error creating checkout session: {e}')
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
+
+print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
+
 
 @app.route('/authorize')
 def authorize():
