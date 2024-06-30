@@ -169,7 +169,6 @@ def create_checkout_session():
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
 
-
 @app.after_request
 def set_csp_header(response):
     response.headers['Content-Security-Policy'] = (
@@ -183,6 +182,7 @@ def set_csp_header(response):
         "frame-src 'self' https://js.stripe.com *"
     )
     return response
+
 
 
 
