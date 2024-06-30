@@ -131,7 +131,7 @@ def create_checkout_session():
         # Create a new Stripe Checkout Session
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
-            line_items=[
+            line_items=[  # <-- The change is here
                 {
                     'price_data': {
                         'currency': 'usd',
@@ -142,7 +142,7 @@ def create_checkout_session():
                     },
                     'quantity': 1,
                 },
-            ],
+            ],  # <-- And here
             mode='payment',
             success_url=f"https://nail-shop.onrender.com/ordersuccesspage/{order_id}",
             cancel_url=f"https://nail-shop.onrender.com/cancel",
@@ -162,6 +162,7 @@ def create_checkout_session():
     except Exception as e:
         app.logger.error(f'Error creating checkout session: {e}')
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
+
 
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
