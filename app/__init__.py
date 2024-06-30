@@ -8,6 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from app.models import User,Product, Order, OrderItem
+from flask_caching import Cache
 from flask_jwt_extended import jwt_required, get_jwt_identity 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -92,6 +93,11 @@ else:
 
 Session(app)
 
+cache = Cache(config={'CACHE_TYPE': 'simple'})
+
+cache.init_app(app)
+
+
 db.init_app(app)
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -101,9 +107,6 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
-from flask_caching import Cache
-
-cache = Cache(config={'CACHE_TYPE': 'simple'})
 
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
