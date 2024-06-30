@@ -18,6 +18,10 @@ import stripe
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 
+
+
+app.config.from_object(os.getenv('APP_SETTINGS'))
+
 # Additional configuration for hosted environment
 app.config['ENV'] = 'production'
 app.config['DEBUG'] = False

@@ -14,6 +14,7 @@ class Config:
     JWT_TOKEN_LOCATION = ['headers']
 
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+    STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
 
     DEVELOPER_EMAIL = os.environ.get("DEVELOPER_EMAIL")
 
