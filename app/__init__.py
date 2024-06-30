@@ -101,14 +101,24 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
+from flask_caching import Cache
+
+cache = Cache(config={'CACHE_TYPE': 'simple'})
+
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
     try:
-        stripe.api_key = app.config['STRIPE_SECRET_KEY']  # Add this line to set the API key
-        
+        stripe.api_key = app.config['STRIPE_SECRET_KEY']
+
         data = request.get_json()
         order_id = data['order_id']
+
+        # Check if the checkout session is already cached
+        cache_key = f'checkout_session_{order_id}'
+        cached_session = cache.get(cache_key)
+        if cached_session:
+            return jsonify({'url': cached_session.url})
 
         # Fetch order details from your database
         order = Order.query.get(order_id)
@@ -123,7 +133,7 @@ def create_checkout_session():
                     'price_data': {
                         'currency': 'usd',
                         'product_data': {
-                            'name': 'Order {}'.format(order_id),
+                            'name': f'Order {order_id}',
                         },
                         'unit_amount': int(order.total_amount * 100),  # Convert to cents
                     },
@@ -137,6 +147,9 @@ def create_checkout_session():
                 'order_id': order_id
             }
         )
+
+        # Cache the checkout session
+        cache.set(cache_key, session, timeout=3600)  # Cache for 1 hour
 
         return jsonify({'url': session.url})
     except Exception as e:
