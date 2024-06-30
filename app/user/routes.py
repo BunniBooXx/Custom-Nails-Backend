@@ -55,7 +55,7 @@ def login():
         return jsonify({"message": "Username and password are required"}), 400
 
     user = User.query.filter_by(username=username).first()
-    if not user or not user.check_password(password):
+    if not user or not user.compare_password(password):  # Use compare_password instead of check_password
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
@@ -70,6 +70,7 @@ def login():
     
     app.logger.info("Login successful")
     return response, 200
+
 
 @user_blueprint.route('', methods=['GET'])
 @cross_origin()
