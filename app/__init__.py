@@ -50,7 +50,11 @@ from flask_migrate import Migrate
 
 migrate = Migrate(app, db)
 
-CORS(app, resources={r"/*": {"origins": "*"}}, methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"])
+
+CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
+
+
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], supports_credentials=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -166,10 +170,6 @@ def create_checkout_session():
 
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
-@app.after_request
-def set_csp_header(response):
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: *; connect-src 'self' https://custom-nails-backend.onrender.com https://api.stripe.com https://m.stripe.com https://*.stripe.com; frame-src 'self' https://js.stripe.com *"
-    return response
 
 
 @app.after_request
