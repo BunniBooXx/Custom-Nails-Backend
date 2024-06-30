@@ -8,11 +8,7 @@ from app import app
 
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
-def authenticate_user(username, password):
-    user = User.query.filter_by(username=username).first()
-    if user and check_password_hash(user.password, password):
-        return user
-    return None
+
 
 @user_blueprint.route('/signup', methods=['POST'])
 @cross_origin()
@@ -54,8 +50,8 @@ def login():
         app.logger.error("Username and/or password not provided")
         return jsonify({"message": "Username and password are required"}), 400
 
-    user = User.query.filter_by(username=username).first()
-    if not user or not user.compare_password(password):  # Use compare_password instead of check_password
+    user = authenticate_user(username, password)
+    if not user:
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
@@ -64,12 +60,18 @@ def login():
     access_token = create_access_token(identity=user.user_id, expires_delta=expires)
     app.logger.info(f"Access token created for user id: {user.user_id}")
     
-    response = jsonify(message="Login successful")
+    response = jsonify(message="Login successful", access_token=access_token)
     response.headers['Authorization'] = f'Bearer {access_token}'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
     
     app.logger.info("Login successful")
     return response, 200
+
+def authenticate_user(username, password):
+    user = User.query.filter_by(username=username).first()
+    if user and user.compare_password(password):
+        return user
+    return None
 
 
 
