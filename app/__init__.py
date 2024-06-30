@@ -7,9 +7,9 @@ from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from app.models import User,Product, Order, OrderItem
+from app.models import User, Product, Order, OrderItem
 from flask_caching import Cache
-from flask_jwt_extended import jwt_required, get_jwt_identity 
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
 from logging.handlers import RotatingFileHandler
 from flask_session import Session
@@ -17,10 +17,6 @@ from app.models import db
 import stripe
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
-
-
-
-
 
 # Additional configuration for hosted environment
 app.config['ENV'] = 'production'
@@ -54,8 +50,7 @@ from flask_migrate import Migrate
 
 migrate = Migrate(app, db)
 
-##CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-CORS(app, resources={r"/*": {"origins": "*"}}, methos=["OPTIONS", "GET", "POST", "PUT", "DELETE"])
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -74,7 +69,7 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
 from app.order.routes import order_blueprint
 from app.user.routes import user_blueprint
 from app.product.routes import product_blueprint
-from app.cart.routes import cart_blueprint 
+from app.cart.routes import cart_blueprint
 
 app.register_blueprint(user_blueprint, url_prefix='/user')
 app.register_blueprint(product_blueprint, url_prefix='/product')
@@ -98,9 +93,7 @@ else:
 Session(app)
 
 cache = Cache(config={'CACHE_TYPE': 'simple'})
-
 cache.init_app(app)
-
 
 db.init_app(app)
 
@@ -111,15 +104,18 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
-
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
     try:
         stripe.api_key = app.config['STRIPE_SECRET_KEY']
 
+        # Parse the request body as JSON
         data = request.get_json()
-        order_id = data['order_id']
+
+        order_id = data.get('order_id')
+        if not order_id:
+            return jsonify({'error': 'Missing order_id in request body'}), 400
 
         # Check if the checkout session is already cached
         cache_key = f'checkout_session_{order_id}'
@@ -161,13 +157,16 @@ def create_checkout_session():
         return jsonify({
             'sessionId': session.id,
             'publishableKey': app.config['STRIPE_PUBLISHABLE_KEY']
-        }),200
+        }), 200
 
     except Exception as e:
         app.logger.error(f'Error creating checkout session: {e}')
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
 
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
+
+# ... (rest of the code)
+
 
 
 @app.route('/authorize')
