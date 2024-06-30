@@ -154,7 +154,11 @@ def create_checkout_session():
         # Cache the checkout session
         cache.set(cache_key, session, timeout=3600)  # Cache for 1 hour
 
-        return jsonify({'url': session.url})
+        return jsonify({
+            'sessionId': session.id,
+            'publishableKey': app.config['STRIPE_PUBLISHABLE_KEY']
+        }),200
+
     except Exception as e:
         app.logger.error(f'Error creating checkout session: {e}')
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
