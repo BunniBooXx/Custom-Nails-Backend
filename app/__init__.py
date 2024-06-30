@@ -20,7 +20,7 @@ app = Flask(__name__, template_folder='templates', static_url_path='/nails', sta
 
 
 
-app.config.from_object(os.getenv('APP_SETTINGS'))
+
 
 # Additional configuration for hosted environment
 app.config['ENV'] = 'production'
