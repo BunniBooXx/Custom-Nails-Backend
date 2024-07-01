@@ -1,5 +1,5 @@
 from flask import request, jsonify, Blueprint
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token, get_jwt
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import cross_origin
 from datetime import timedelta
@@ -44,7 +44,7 @@ def signup():
     return jsonify({"message": "User created successfully"}), 201
 
 @user_blueprint.route('/login', methods=['POST'])
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def login():
     app.logger.info("Login route called")
     
@@ -68,26 +68,26 @@ def login():
         return jsonify({"message": "Invalid credentials"}), 401
 
     # Create an access token with an expiration of 3 days
-    expires = timedelta(days=3)
-    access_token = create_access_token(identity=user.user_id, expires_delta=expires)
+    access_token = create_access_token(identity=user.user_id, expires_delta=timedelta(days=3))
+    refresh_token = create_refresh_token(identity=user.user_id)
+
     app.logger.info(f"Access token created for user id: {user.user_id}")
 
     # Create response
-    response = jsonify(message="Login successful")
-    response.headers['Authorization'] = f'Bearer {access_token}'
+    response = jsonify(message="Login successful", access_token=access_token)
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
+    response.set_cookie('refresh_token', refresh_token, httponly=True, secure=True, samesite='None')
 
-    # Set secure cookie
-    response.set_cookie(
-        'my_cookie',
-        access_token,
-        secure=True,
-        httponly=True,
-        samesite='None'
-    )
-    
     app.logger.info("Login successful")
     return response, 200
+
+@user_blueprint.route('/refresh', methods=['POST'])
+@cross_origin(supports_credentials=True)
+@jwt_required(refresh=True)
+def refresh():
+    current_user = get_jwt_identity()
+    access_token = create_access_token(identity=current_user, expires_delta=timedelta(days=3))
+    return jsonify(access_token=access_token), 200
 
 @user_blueprint.route('/fetch/user', methods=['GET'])
 @cross_origin()
