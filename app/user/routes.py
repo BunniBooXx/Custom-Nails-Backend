@@ -77,16 +77,6 @@ def login():
     app.logger.info("Login successful")
     return response, 200
 
-
-def authenticate_user(username, password):
-    user = User.query.filter_by(username=username).first()
-    if user and user.compare_password(password):
-        return user
-    return None
-
-
-
-
 @user_blueprint.route('/fetch/user', methods=['GET'])
 @cross_origin()
 @jwt_required()
@@ -102,6 +92,23 @@ def get_user_identity():
         }), 200
     else:
         return jsonify({"message": "User not found"}), 404
+
+@user_blueprint.route('/protected', methods=['GET'])
+@cross_origin()
+@jwt_required()
+def protected():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    return jsonify(logged_in_as=user.username), 200
+
+# Additional user routes...
+
+def authenticate_user(username, password):
+    user = User.query.filter_by(username=username).first()
+    if user and user.compare_password(password):
+        return user
+    return None
+
 
 @user_blueprint.route('/protected', methods=['GET'])
 @cross_origin()
