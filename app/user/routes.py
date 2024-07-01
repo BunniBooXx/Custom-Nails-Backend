@@ -87,7 +87,7 @@ def authenticate_user(username, password):
 
 
 
-@user_blueprint.route('', methods=['GET'])
+@user_blueprint.route('/fetch/user', methods=['GET'])
 @cross_origin()
 @jwt_required()
 def get_user_identity():

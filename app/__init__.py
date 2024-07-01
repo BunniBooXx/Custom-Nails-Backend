@@ -62,6 +62,11 @@ csp = {
 # Initialize Talisman with the CSP configuration
 Talisman(app, content_security_policy=csp)
 
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Internal Server Error: {error}')
+    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
+
 @app.route('/')
 def index():
     response = make_response("Setting a cookie")
@@ -73,11 +78,6 @@ def index():
         samesite='None'  # Use 'Lax' or 'Strict' if possible
     )
     return response
-
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f'Internal Server Error: {error}')
-    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
 
 @app.route('/user/<int:user_id>', methods=['GET'])
 def get_user(user_id):
@@ -154,7 +154,6 @@ print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
 if not os.path.exists(CLIENT_SECRETS_FILE):
     raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
 
-
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
@@ -217,8 +216,6 @@ def create_checkout_session():
     except Exception as e:
         app.logger.error(f'Error creating checkout session: {e}', exc_info=True)
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
-
-
 
 print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
@@ -386,13 +383,10 @@ def debug_token():
     current_user_id = get_jwt_identity()
     return jsonify({"current_user_id": current_user_id}), 200
 
-@app.route('/')
-def index():
-    return 'Welcome to your Flask application!'
-
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
