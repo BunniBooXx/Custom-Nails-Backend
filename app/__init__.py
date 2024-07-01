@@ -11,6 +11,7 @@ from app.models import User, Product, Order, OrderItem
 from flask_caching import Cache
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
+from flask_cors import cross_origin
 from logging.handlers import RotatingFileHandler
 from flask_session import Session
 from app.models import db
@@ -81,6 +82,15 @@ def index():
     )
     return response
 
+@app.route('/user', methods=['OPTIONS'])
+@cross_origin()
+def user_options():
+    response = jsonify()
+    response.headers.add('Access-Control-Allow-Origin', 'https://nail-shop.onrender.com')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Authorization,Content-Type')
+    return response
+
 @app.route('/user/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     try:
@@ -122,6 +132,7 @@ from app.order.routes import order_blueprint
 from app.user.routes import user_blueprint
 from app.product.routes import product_blueprint
 from app.cart.routes import cart_blueprint
+
 
 app.register_blueprint(user_blueprint, url_prefix='/user')
 app.register_blueprint(product_blueprint, url_prefix='/product')
