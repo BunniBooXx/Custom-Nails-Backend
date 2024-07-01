@@ -27,7 +27,27 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+# Ensure a single, unified CORS configuration
 CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
+
+@app.route('/user', methods=['OPTIONS'])
+def user_options():
+    response = jsonify()
+    response.headers.add('Access-Control-Allow-Origin', 'https://nail-shop.onrender.com')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Authorization,Content-Type')
+    return response
+
+@app.route('/user/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    try:
+        user = User.query.get(user_id)
+        if user:
+            return jsonify(user.to_response())
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
 
 from flask_talisman import Talisman
 
@@ -82,27 +102,8 @@ def index():
     )
     return response
 
-@app.route('/user', methods=['OPTIONS'])
-@cross_origin()
-def user_options():
-    response = jsonify()
-    response.headers.add('Access-Control-Allow-Origin', 'https://nail-shop.onrender.com')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Authorization,Content-Type')
-    return response
 
-@app.route('/user/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    try:
-        app.logger.info(f"Fetching user with ID: {user_id}")
-        user = User.query.get(user_id)
-        if user:
-            return jsonify(user.to_response())
-        else:
-            return jsonify({'error': 'User not found'}), 404
-    except Exception as e:
-        app.logger.error(f'Error fetching user: {e}')
-        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
+
 
 mail = Mail(app)
 jwt = JWTManager(app)
