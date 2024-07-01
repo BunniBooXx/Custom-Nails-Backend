@@ -1,40 +1,20 @@
 import os
 from flask import Flask, request, jsonify, redirect, url_for, session, render_template, make_response
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
+from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from app.models import User, Product, Order, OrderItem
 from flask_caching import Cache
-from flask_migrate import Migrate
+from flask_jwt_extended import jwt_required, get_jwt_identity
+import logging
 from logging.handlers import RotatingFileHandler
 from flask_session import Session
-from flask_talisman import Talisman
+from app.models import db
 import stripe
-import logging
-from app.models import User, Product, Order, OrderItem, db
-from app.order.routes import order_blueprint
-from app.user.routes import user_blueprint
-from app.product.routes import product_blueprint
-from app.cart.routes import cart_blueprint
-
-# Define the path to the client secrets file
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
-
-# Define the scopes
-SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-
-def credentials_to_dict(credentials):
-    return {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 
@@ -46,7 +26,8 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Content Security Policy Configuration
+from flask_talisman import Talisman
+
 csp = {
     'default-src': ["'self'"],
     'script-src': [
@@ -81,22 +62,71 @@ csp = {
 # Initialize Talisman with the CSP configuration
 Talisman(app, content_security_policy=csp)
 
-# Set up CORS
-CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, supports_credentials=True)
+@app.route('/')
+def index():
+    response = make_response("Setting a cookie")
+    response.set_cookie(
+        'my_cookie', 
+        'cookie_value', 
+        secure=True, 
+        httponly=True, 
+        samesite='None'  # Use 'Lax' or 'Strict' if possible
+    )
+    return response
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Internal Server Error: {error}')
+    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
+
+@app.route('/user/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    try:
+        app.logger.info(f"Fetching user with ID: {user_id}")
+        user = User.query.get(user_id)
+        if user:
+            return jsonify(user.to_response())
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        app.logger.error(f'Error fetching user: {e}')
+        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
+
+mail = Mail(app)
+jwt = JWTManager(app)
+from flask_migrate import Migrate
+
+migrate = Migrate(app, db)
+
+CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
+
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], supports_credentials=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
+# Set up logging
+if not app.debug:
+    handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
+    handler.setLevel(logging.INFO)
+    app.logger.addHandler(handler)
+else:
+    logging.basicConfig(level=logging.DEBUG)
 
 # Ensure a secret key is set for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
 
-# Initialize extensions
-mail = Mail(app)
-jwt = JWTManager(app)
-cache = Cache(config={'CACHE_TYPE': 'simple'})
-cache.init_app(app)
-db.init_app(app)
-migrate = Migrate(app, db)
-Session(app)
+from app.order.routes import order_blueprint
+from app.user.routes import user_blueprint
+from app.product.routes import product_blueprint
+from app.cart.routes import cart_blueprint
 
-# Configure Flask-Session
+app.register_blueprint(user_blueprint, url_prefix='/user')
+app.register_blueprint(product_blueprint, url_prefix='/product')
+app.register_blueprint(order_blueprint, url_prefix='/order')
+app.register_blueprint(cart_blueprint, url_prefix='/cart')
+
+# Flask-Session setup
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
@@ -110,48 +140,48 @@ if not os.path.exists(app.config['SESSION_FILE_DIR']):
 else:
     print(f"Session directory exists: {app.config['SESSION_FILE_DIR']}")
 
-# Stripe configuration
-stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+Session(app)
 
-# Register blueprints
-app.register_blueprint(user_blueprint, url_prefix='/user')
-app.register_blueprint(product_blueprint, url_prefix='/product')
-app.register_blueprint(order_blueprint, url_prefix='/order')
-app.register_blueprint(cart_blueprint, url_prefix='/cart')
+cache = Cache(config={'CACHE_TYPE': 'simple'})
+cache.init_app(app)
 
-# Example route to set a cookie
-@app.route('/')
-def index():
-    response = make_response("Welcome to your Flask application!")
-    response.set_cookie(
-        'my_cookie', 
-        'cookie_value', 
-        secure=True, 
-        httponly=True, 
-        samesite='None'
-    )
-    return response
+db.init_app(app)
+
+SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
+print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
+
+if not os.path.exists(CLIENT_SECRETS_FILE):
+    raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
+
 
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
 def create_checkout_session():
     try:
+        app.logger.info('Received request to create checkout session.')
         data = request.get_json()
+        app.logger.info(f'Request data: {data}')
+        
         order_id = data.get('order_id')
         if not order_id:
+            app.logger.error('Missing order_id in request body.')
             return jsonify({'error': 'Missing order_id in request body'}), 400
 
         # Check if the checkout session is already cached
         cache_key = f'checkout_session_{order_id}'
         cached_session = cache.get(cache_key)
         if cached_session:
+            app.logger.info(f'Found cached session for order_id {order_id}.')
             return jsonify({'url': cached_session.url})
 
         # Fetch order details from your database
         order = Order.query.get(order_id)
         if not order:
+            app.logger.error(f'Order not found for order_id {order_id}.')
             return jsonify({'error': 'Order not found'}), 404
 
+        app.logger.info(f'Creating Stripe checkout session for order_id {order_id}.')
         # Create a new Stripe Checkout Session
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -177,6 +207,7 @@ def create_checkout_session():
 
         # Cache the checkout session
         cache.set(cache_key, session, timeout=3600)  # Cache for 1 hour
+        app.logger.info(f'Checkout session created and cached for order_id {order_id}.')
 
         return jsonify({
             'sessionId': session.id,
@@ -184,8 +215,12 @@ def create_checkout_session():
         }), 200
 
     except Exception as e:
-        app.logger.error(f'Error creating checkout session: {e}')
+        app.logger.error(f'Error creating checkout session: {e}', exc_info=True)
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
+
+
+
+print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
 
 @app.after_request
 def set_csp_header(response):
@@ -201,24 +236,6 @@ def set_csp_header(response):
     print("Setting CSP header:", csp)
     response.headers['Content-Security-Policy'] = csp
     return response
-
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f'Internal Server Error: {error}')
-    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
-
-@app.route('/user/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    try:
-        app.logger.info(f"Fetching user with ID: {user_id}")
-        user = User.query.get(user_id)
-        if user:
-            return jsonify(user.to_response())
-        else:
-            return jsonify({'error': 'User not found'}), 404
-    except Exception as e:
-        app.logger.error(f'Error fetching user: {e}')
-        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
 
 @app.route('/authorize')
 def authorize():
@@ -255,6 +272,16 @@ def oauth2_callback():
     session['credentials'] = credentials_to_dict(credentials)
     print("Credentials stored in session:", session['credentials'])
     return redirect(url_for('send_email'))
+
+def credentials_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
 
 def get_gmail_service():
     try:
@@ -359,10 +386,13 @@ def debug_token():
     current_user_id = get_jwt_identity()
     return jsonify({"current_user_id": current_user_id}), 200
 
+@app.route('/')
+def index():
+    return 'Welcome to your Flask application!'
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
-
 
 
 
