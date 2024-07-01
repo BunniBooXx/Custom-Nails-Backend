@@ -1,20 +1,40 @@
 import os
-from flask import Flask, request, jsonify, redirect, url_for, session, render_template
+from flask import Flask, request, jsonify, redirect, url_for, session, render_template, make_response
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from app.models import User, Product, Order, OrderItem
 from flask_caching import Cache
-from flask_jwt_extended import jwt_required, get_jwt_identity
-import logging
+from flask_migrate import Migrate
 from logging.handlers import RotatingFileHandler
 from flask_session import Session
-from app.models import db
+from flask_talisman import Talisman
 import stripe
+import logging
+from app.models import User, Product, Order, OrderItem, db
+from app.order.routes import order_blueprint
+from app.user.routes import user_blueprint
+from app.product.routes import product_blueprint
+from app.cart.routes import cart_blueprint
+
+# Define the path to the client secrets file
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
+
+# Define the scopes
+SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+
+def credentials_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
 
 app = Flask(__name__, template_folder='templates', static_url_path='/nails', static_folder='nails')
 
@@ -26,78 +46,57 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-from flask_talisman import Talisman
-
-
-
-# Content Security Policy configuration using Talisman
+# Content Security Policy Configuration
 csp = {
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
-    'connect-src': ["'self'", 'https://api.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
-    'frame-src': ['https://js.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
-    'img-src': ["'self'", 'data:', 'https://*.stripe.com', 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com'],
-    'style-src': ["'self'", "'unsafe-inline'", 'https://custom-nails-backend.example.com', 'https://nail-shop.example.com']
+    'script-src': [
+        "'self'", "'unsafe-inline'", "'unsafe-eval'",
+        'https://js.stripe.com',
+        'https://custom-nails-backend.example.com',  # Replace with your backend domain
+        'https://nail-shop.example.com'  # Replace with your frontend domain
+    ],
+    'connect-src': [
+        "'self'",
+        'https://api.stripe.com',
+        'https://custom-nails-backend.example.com',  # Replace with your backend domain
+        'https://nail-shop.example.com'  # Replace with your frontend domain
+    ],
+    'frame-src': [
+        'https://js.stripe.com',
+        'https://custom-nails-backend.example.com',  # Replace with your backend domain
+        'https://nail-shop.example.com'  # Replace with your frontend domain
+    ],
+    'img-src': [
+        "'self'", 'data:', 'https://*.stripe.com',
+        'https://custom-nails-backend.example.com',  # Replace with your backend domain
+        'https://nail-shop.example.com'  # Replace with your frontend domain
+    ],
+    'style-src': [
+        "'self'", "'unsafe-inline'",
+        'https://custom-nails-backend.example.com',  # Replace with your backend domain
+        'https://nail-shop.example.com'  # Replace with your frontend domain
+    ]
 }
 
 # Initialize Talisman with the CSP configuration
 Talisman(app, content_security_policy=csp)
 
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f'Internal Server Error: {error}')
-    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
-
-@app.route('/user/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    try:
-        app.logger.info(f"Fetching user with ID: {user_id}")
-        user = User.query.get(user_id)
-        if user:
-            return jsonify(user.to_response())
-        else:
-            return jsonify({'error': 'User not found'}), 404
-    except Exception as e:
-        app.logger.error(f'Error fetching user: {e}')
-        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
-
-mail = Mail(app)
-jwt = JWTManager(app)
-from flask_migrate import Migrate
-
-migrate = Migrate(app, db)
-
-
-CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
-
-
-CORS(app, resources={r"/*": {"origins": "*"}}, methods=["OPTIONS", "GET", "POST", "PUT", "DELETE"], supports_credentials=True)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-print(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
-
-# Set up logging
-if not app.debug:
-    handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
-    handler.setLevel(logging.INFO)
-    app.logger.addHandler(handler)
-else:
-    logging.basicConfig(level=logging.DEBUG)
+# Set up CORS
+CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}}, supports_credentials=True)
 
 # Ensure a secret key is set for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
 
-from app.order.routes import order_blueprint
-from app.user.routes import user_blueprint
-from app.product.routes import product_blueprint
-from app.cart.routes import cart_blueprint
+# Initialize extensions
+mail = Mail(app)
+jwt = JWTManager(app)
+cache = Cache(config={'CACHE_TYPE': 'simple'})
+cache.init_app(app)
+db.init_app(app)
+migrate = Migrate(app, db)
+Session(app)
 
-app.register_blueprint(user_blueprint, url_prefix='/user')
-app.register_blueprint(product_blueprint, url_prefix='/product')
-app.register_blueprint(order_blueprint, url_prefix='/order')
-app.register_blueprint(cart_blueprint, url_prefix='/cart')
-
-# Flask-Session setup
+# Configure Flask-Session
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
@@ -111,20 +110,27 @@ if not os.path.exists(app.config['SESSION_FILE_DIR']):
 else:
     print(f"Session directory exists: {app.config['SESSION_FILE_DIR']}")
 
-Session(app)
+# Stripe configuration
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 
-cache = Cache(config={'CACHE_TYPE': 'simple'})
-cache.init_app(app)
+# Register blueprints
+app.register_blueprint(user_blueprint, url_prefix='/user')
+app.register_blueprint(product_blueprint, url_prefix='/product')
+app.register_blueprint(order_blueprint, url_prefix='/order')
+app.register_blueprint(cart_blueprint, url_prefix='/cart')
 
-db.init_app(app)
-
-SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), 'config', 'client_secrets.json')
-print(f"CLIENT_SECRETS_FILE path: {CLIENT_SECRETS_FILE}")
-
-if not os.path.exists(CLIENT_SECRETS_FILE):
-    raise FileNotFoundError(f"Client secrets file not found at path: {CLIENT_SECRETS_FILE}")
-
+# Example route to set a cookie
+@app.route('/')
+def index():
+    response = make_response("Welcome to your Flask application!")
+    response.set_cookie(
+        'my_cookie', 
+        'cookie_value', 
+        secure=True, 
+        httponly=True, 
+        samesite='None'
+    )
+    return response
 
 @app.route('/create-checkout-session', methods=['POST'])
 @jwt_required()
@@ -181,10 +187,6 @@ def create_checkout_session():
         app.logger.error(f'Error creating checkout session: {e}')
         return jsonify({'error': 'Failed to create checkout session', 'message': str(e)}), 500
 
-
-
-print(f"Stripe Secret Key: {app.config['STRIPE_SECRET_KEY']}")
-
 @app.after_request
 def set_csp_header(response):
     csp = (
@@ -200,14 +202,23 @@ def set_csp_header(response):
     response.headers['Content-Security-Policy'] = csp
     return response
 
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Internal Server Error: {error}')
+    return jsonify({'error': 'Internal Server Error', 'message': str(error)}), 500
 
-
-
-
-
-
-
-
+@app.route('/user/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    try:
+        app.logger.info(f"Fetching user with ID: {user_id}")
+        user = User.query.get(user_id)
+        if user:
+            return jsonify(user.to_response())
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        app.logger.error(f'Error fetching user: {e}')
+        return jsonify({'error': 'Failed to fetch user', 'message': str(e)}), 500
 
 @app.route('/authorize')
 def authorize():
@@ -244,16 +255,6 @@ def oauth2_callback():
     session['credentials'] = credentials_to_dict(credentials)
     print("Credentials stored in session:", session['credentials'])
     return redirect(url_for('send_email'))
-
-def credentials_to_dict(credentials):
-    return {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
 
 def get_gmail_service():
     try:
@@ -358,13 +359,10 @@ def debug_token():
     current_user_id = get_jwt_identity()
     return jsonify({"current_user_id": current_user_id}), 200
 
-@app.route('/')
-def index():
-    return 'Welcome to your Flask application!'
-
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 1000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 

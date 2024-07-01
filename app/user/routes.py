@@ -50,8 +50,8 @@ def login():
         app.logger.error("Username and/or password not provided")
         return jsonify({"message": "Username and password are required"}), 400
 
-    user = authenticate_user(username, password)
-    if not user:
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.compare_password(password):  # Use compare_password instead of check_password
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
@@ -59,13 +59,24 @@ def login():
     expires = timedelta(days=3)
     access_token = create_access_token(identity=user.user_id, expires_delta=expires)
     app.logger.info(f"Access token created for user id: {user.user_id}")
-    
-    response = jsonify(message="Login successful", access_token=access_token)
+
+    # Create response
+    response = jsonify(message="Login successful")
     response.headers['Authorization'] = f'Bearer {access_token}'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
+
+    # Set secure cookie
+    response.set_cookie(
+        'my_cookie',
+        access_token,
+        secure=True,
+        httponly=True,
+        samesite='None'
+    )
     
     app.logger.info("Login successful")
     return response, 200
+
 
 def authenticate_user(username, password):
     user = User.query.filter_by(username=username).first()
