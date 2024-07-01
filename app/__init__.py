@@ -26,6 +26,8 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
+
 from flask_talisman import Talisman
 
 csp = {
