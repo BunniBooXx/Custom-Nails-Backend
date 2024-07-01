@@ -8,8 +8,6 @@ from app import app
 
 user_blueprint = Blueprint("user", __name__, url_prefix="/user")
 
-
-
 @user_blueprint.route('/signup', methods=['POST'])
 @cross_origin()
 def signup():
@@ -108,15 +106,6 @@ def authenticate_user(username, password):
     if user and user.compare_password(password):
         return user
     return None
-
-
-@user_blueprint.route('/protected', methods=['GET'])
-@cross_origin()
-@jwt_required()
-def protected():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    return jsonify(logged_in_as=user.username), 200
 
 @user_blueprint.route('/update/<int:user_id>/username', methods=['PUT'])
 @cross_origin()
