@@ -44,6 +44,7 @@ def signup():
     return jsonify({"message": "User created successfully"}), 201
 
 
+
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def login():
@@ -96,6 +97,8 @@ def get_user_identity():
         }), 200
     else:
         return jsonify({"message": "User not found"}), 404
+
+
 
 @user_blueprint.route('/refresh', methods=['POST'])
 @cross_origin(supports_credentials=True)

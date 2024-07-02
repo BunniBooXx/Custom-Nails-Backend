@@ -28,7 +28,7 @@ app.config.from_object(os.getenv('APP_SETTINGS'))
 logging.basicConfig(level=logging.INFO)
 
 # Ensure a single, unified CORS configuration
-CORS(app, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://localhost:3000", "https://nail-shop.onrender.com"]}})
 
 @app.route('/user', methods=['OPTIONS'])
 def user_options():
