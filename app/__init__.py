@@ -36,6 +36,7 @@ def user_options():
     response.headers.add('Access-Control-Allow-Origin', 'https://nail-shop.onrender.com')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
     response.headers.add('Access-Control-Allow-Headers', 'Authorization,Content-Type')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 
 @app.route('/user/<int:user_id>', methods=['GET'])
