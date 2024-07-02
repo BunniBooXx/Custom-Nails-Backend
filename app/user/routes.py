@@ -43,7 +43,6 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
-
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def login():
@@ -64,15 +63,17 @@ def login():
         return jsonify({"message": "Username and password are required"}), 400
 
     user = User.query.filter_by(username=username).first()
-    if not user or not user.compare_password(password):
+    if not user or not user.compare_password(password):  # Use compare_password instead of check_password
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
+    # Create an access token with an expiration of 3 days
     access_token = create_access_token(identity=user.user_id, expires_delta=timedelta(days=3))
     refresh_token = create_refresh_token(identity=user.user_id)
 
     app.logger.info(f"Access token created for user id: {user.user_id}")
 
+    # Create response
     response = jsonify(message="Login successful", access_token=access_token)
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
