@@ -43,6 +43,7 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
+
 @user_blueprint.route('/login', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def login():
@@ -63,18 +64,17 @@ def login():
         return jsonify({"message": "Username and password are required"}), 400
 
     user = User.query.filter_by(username=username).first()
-    if not user or not user.compare_password(password):  # Use compare_password instead of check_password
+    if not user or not user.compare_password(password):
         app.logger.error("Invalid credentials")
         return jsonify({"message": "Invalid credentials"}), 401
 
-    # Create an access token with an expiration of 3 days
     access_token = create_access_token(identity=user.user_id, expires_delta=timedelta(days=3))
     refresh_token = create_refresh_token(identity=user.user_id)
 
     app.logger.info(f"Access token created for user id: {user.user_id}")
 
-    # Create response
     response = jsonify(message="Login successful", access_token=access_token)
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'
     response.set_cookie('refresh_token', refresh_token, httponly=True, secure=True, samesite='None')
 
@@ -87,21 +87,25 @@ def login():
 def refresh():
     current_user = get_jwt_identity()
     access_token = create_access_token(identity=current_user, expires_delta=timedelta(days=3))
-    return jsonify(access_token=access_token), 200
+    response = jsonify(access_token=access_token)
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 200
 
 @user_blueprint.route('/fetch/user', methods=['GET'])
-@cross_origin()
+@cross_origin(supports_credentials=True)
 @jwt_required()
 def get_user_identity():
     user_id = get_jwt_identity()
     app.logger.info(f"Fetching user with ID: {user_id}")
     user = User.query.get(user_id)
     if user:
-        return jsonify({
+        response = jsonify({
             "user_id": user.user_id,
             "username": user.username,
             "email": user.email
-        }), 200
+        })
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
     else:
         return jsonify({"message": "User not found"}), 404
 
